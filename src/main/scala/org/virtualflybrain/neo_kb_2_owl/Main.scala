@@ -11,11 +11,11 @@ class Cat extends Command(description = "Command line options and args for .") {
   var dataset = arg[String](description = "dataset to load") // This would allow current pattern of control by shell script
   var facts = opt[Boolean](abbrev = "f", description = "Set to add facts")
   var include_images = opt[Boolean](abbrev = "i", description = "Set to include individuals.")
-  var syntax  = opt[String](abbrev = "s", description = "Syntax of output file.")
+  var syntax  = opt[String](description = "Syntax of output file.")
   var test = opt[Boolean](abbrev = "t", description = "Run in test mode (sets return limits on queries)")
 }
 
-object main extends App {
+object Main extends App {
   Cli.parse(args).withCommand(new Cat) { case cat => 
   val g = GraphDatabase.driver(cat.endpoint, AuthTokens.basic(cat.usr,cat.pwd))
   val session = g.session()
