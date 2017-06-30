@@ -1,8 +1,13 @@
-services:
-  - docker
+#services:
+#  - docker
   
+#script:
+#  - docker build -t test-image:test .
+#  - docker run -d --name test test-image:test
+#  - sleep 2m
+#  - docker logs test
+
+language: scala
+
 script:
-  - docker build -t test-image:test .
-  - docker run -d --name test test-image:test
-  - sleep 2m
-  - docker logs test
+   - sbt run org.virtualflybrain.neo_kb_2_owl.main
