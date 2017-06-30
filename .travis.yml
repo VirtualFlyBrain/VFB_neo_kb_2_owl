@@ -10,6 +10,6 @@
 language: scala
 
 script:
-   - sbt run org.virtualflybrain.neo_kb_2_owl.main
-   - sbt run org.virtualflybrain.neo_kb_2_owl.main -t --endpoint='http://kb.virtualflybrain.org' dataset='Cachero2010'
+   - sbt run org.virtualflybrain.neo_kb_2_owl.Main
+   - sbt run org.virtualflybrain.neo_kb_2_owl.Main -t --endpoint='http://kb.virtualflybrain.org' dataset='Cachero2010'
    
