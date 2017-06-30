@@ -45,17 +45,24 @@ class cypher2OWL(bs: BrainScowl, session: Session , dataset: String) {
   // 2. Load all and filter. The latter has the advantage that it will be easy to support intra-datset links
   // coming from connectomics data.
   
-  def add_typed_ind_by_dataset(dataset :String) {
+  def add_typed_inds(test: Boolean = false) {
     val xref = AnnotationProperty("") // Better to pull than hard wire?
-    val cypher = """MATCH (c:Class)<-[r:INSTANCEOF|RELATED]-(i:Individual)-[:has_source]->(ds:DataSet)
-                  WHERE ds.label = '%s' 
+    val limit = if (test) {
+      " limit 10"
+      } else {
+        ""
+    } // Should really make this into a separate function!
+    val cypher = s""""MATCH (c:Class)<-[r:INSTANCEOF|RELATED]-(i:Individual)-[:has_source]->(ds:DataSet)
+                  WHERE ds.label = '$dataset' 
                   WITH c,r,i
                   OPTIONAL MATCH (i)-[hs:has_site]-(s:Site)
-                  RETURN c, i, r type(r) as rel_typ, hs, s"""  // add interpolation with this.dataset
+                  RETURN c.iri, r.iri, i.iri, i.label, type(r) as rel_typ""" + limit
+    
     val results = this.session.run(cypher)
     while (results.hasNext()) {
       val record = results.next();
       val i = NamedIndividual(record.get("i.iri").asString)
+      // TODO: call to function to check if i already in owl, add label if not
       val c = Class(record.get("c.iri").asString)
       if (record.get("rel_type").asString == "INSTANCEOF") {
         this.bs.add_axiom(i Type c)
@@ -72,23 +79,30 @@ class cypher2OWL(bs: BrainScowl, session: Session , dataset: String) {
   }
  }
     
-  def add_facts_by_dataset(dataset :String, blacklist: Array[String]) {
-    val cypher = """MATCH (c:Class)-[:INSTANCEOF]-(j:Individual)<-[r:RELATED]-(i:Individual)-[:has_source]->(ds:DataSet) " 
-                  WHERE ds.label = '%s' "
-                  RETURN c, i, r"""  // add interpolation with this.dataset
+  def add_facts(blacklist: Array[String], test: Boolean = false) {
+    val limit = if (test) {
+      " limit 10"
+      } else {
+        ""
+    }
+    val cypher = s"""MATCH (c:Class)-[:INSTANCEOF]-(j:Individual)<-[r:RELATED]-(i:Individual)-[:has_source]->(ds:DataSet) " 
+                  WHERE ds.label = '$dataset'"
+                  RETURN c.iri, i.iri, r.iri""" + limit  
     val results = this.session.run(cypher)
     while (results.hasNext()) {
       // Add a step to check if c.class is on blacklist
       val record = results.next();
-      val i = NamedIndividual(record.get("i.iri").asString)
-      val j = NamedIndividual(record.get("j.iri").asString)
-      val r = ObjectProperty(record.get("r.iri").asString)
-      this.bs.add_axiom(i Fact (r, j))
+      if (!(blacklist contains record.get("r.iri").asString)) {
+        val i = NamedIndividual(record.get("i.iri").asString)
+        val j = NamedIndividual(record.get("j.iri").asString)
+        val r = ObjectProperty(record.get("r.iri").asString)
+        this.bs.add_axiom(i Fact (r, j))
+      }
       //val c = Class(record.get("c.iri").asString)  // Should we deal with this here at all?
       //this.bs.add_axiom(j Type (r some c))
 
     }
-  }  
+  }
 
   
   

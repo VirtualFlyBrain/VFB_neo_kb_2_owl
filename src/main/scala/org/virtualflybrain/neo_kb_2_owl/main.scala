@@ -12,6 +12,7 @@ class Cat extends Command(description = "Command line options and args for .") {
   var facts = opt[Boolean](abbrev = "f", description = "Set to add facts")
   var include_images = opt[Boolean](abbrev = "i", description = "Set to include individuals.")
   var syntax  = opt[String](abbrev = "s", description = "Syntax of output file.")
+  var test = opt[Boolean](abbrev = "t", description = "Run in test mode (sets return limits on queries)")
 }
 
 object main extends App {
@@ -28,9 +29,9 @@ object main extends App {
      // Make this an arg?
   var owl = new BrainScowl(base + cat.dataset, base)
   var c2o = new cypher2OWL(owl, session, cat.dataset)
-  c2o.add_typed_inds
+  c2o.add_typed_inds(cat.test)
   if (cat.facts) {
-    c2o.add_facts(blacklist)
+    c2o.add_facts(blacklist, cat.test)
   }
   val fbbt = new BrainScowl("http://purl.obolibrary.org/obo/fbbt-simple.owl")
   var dw = new definition_writer(owl, fbbt)
