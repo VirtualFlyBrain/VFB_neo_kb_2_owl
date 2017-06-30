@@ -11,22 +11,36 @@ class Cat extends Command(description = "Command line options and args for .") {
   var dataset = arg[String](description = "dataset to load") // This would allow current pattern of control by shell script
   var facts = opt[Boolean](abbrev = "f", description = "Set to add facts")
   var include_images = opt[Boolean](abbrev = "i", description = "Set to include individuals.")
+  var syntax  = opt[String](abbrev = "s", description = "Syntax of output file.")
 }
 
 object main extends App {
   Cli.parse(args).withCommand(new Cat) { case cat => 
   val g = GraphDatabase.driver(cat.endpoint, AuthTokens.basic(cat.usr,cat.pwd))
   val session = g.session()
-  val datasets = Vector[String]("Chiang2010", "Ito2012") // This should be pushed to config.
   val base = "http://virtualflybrain.org/owl/" // check
-  for (d <- datasets) {
-    var owl = new BrainScowl(base + d, base)
+  val blacklist = 
+      if (!(cat.include_images)) {
+        Array[String]()
+      } else {
+        Array[String]("http://xmlns.com/foaf/0.1/depicts")
+      }
+     // Make this an arg?
+  var owl = new BrainScowl(base + cat.dataset, base)
+  var c2o = new cypher2OWL(owl, session, cat.dataset)
+  c2o.add_typed_inds
+  if (cat.facts) {
+    c2o.add_facts(blacklist)
+  }
+  val fbbt = new BrainScowl("http://purl.obolibrary.org/obo/fbbt-simple.owl")
+  var dw = new definition_writer(owl, fbbt)
+  dw.add_defs()
+    
 //  var c20 = cypher2OWL(s, owl, d)  // datasets could have flags corresponding to particular scheme needs.  e.g. voxel overlap
 //    c20.add_inds
 //    c20.add_direct_named_types
 //    c20.add_direct_anonymous_types
-  }
-  
+//    owl.save(file_path = cat.dataset + ".owl", syntax = "ofn")
   g.close()
   } 
 }
