@@ -4,14 +4,19 @@ import org.neo4j.driver.v1._
 
 import org.backuity.clist._
 
-class Cat extends Command(description = "Command line options and args for .") {
+class Cat extends Command(description = """
+   Convert individuals directly associated with a specified dataset
+   from neo4j KB to OWL. By default only individuals and their Types are
+   translated. Facts refering to the translated individual may be optionally.  
+   If facts are specified, facts pecifying image (channel) individuals are 
+   ignored unless explicitly specified for inclusion.""") {
   var usr = arg[String](description = "username")
   var pwd = arg[String](description = "password")
   var endpoint = arg[String](description = "neo4J bolt endpoint URI")
   var dataset = arg[String](description = "dataset to load") // This would allow current pattern of control by shell script
   var facts = opt[Boolean](abbrev = "f", description = "Set to add facts")
   var include_images = opt[Boolean](abbrev = "i", description = "Set to include individuals.")
-  var syntax  = opt[String](description = "Syntax of output file.")
+  var syntax  = opt[String](description = "Syntax of output file.", default = "ofn")
   var test = opt[Boolean](abbrev = "t", description = "Run in test mode (sets return limits on queries)")
 }
 
