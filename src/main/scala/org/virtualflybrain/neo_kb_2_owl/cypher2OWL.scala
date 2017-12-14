@@ -1,5 +1,5 @@
 package org.virtualflybrain.neo_kb_2_owl
-import dosumis.brainscowl.BrainScowl	
+import dosumis.brainscowl.BrainScowl
 import org.phenoscape.scowl
 import org.phenoscape.scowl._
 import org.neo4j.driver.v1._
@@ -23,13 +23,10 @@ import org.neo4j.driver.v1._
 // Xref writer
 // Needs cycle over
 
+class cypher2OWL(bs: BrainScowl, session: Session, dataset: String) {
 
-
-class cypher2OWL(bs: BrainScowl, session: Session , dataset: String) {
-  
-  
   // constructor should include new Brainscowl object
-  
+
   // Restricting to a single dataset is hard without encoding more of the schema into the translator.
   // Only anatomical individuals have a direct connection to a dataset.  So clearly all of those should be added.
   // Every class or individual one step away should be added too.
@@ -38,56 +35,58 @@ class cypher2OWL(bs: BrainScowl, session: Session , dataset: String) {
   // And then what about when we start adding connectomics data?  
   // At that point any synaptic connection between two inds in any allowed datasets should be allowed.
   // 
-  
+
   // DataSet matching strategies:
   // 1. Match in Cypher:
   ////  Match direct individuals; 
   // 2. Load all and filter. The latter has the advantage that it will be easy to support intra-datset links
   // coming from connectomics data.
-  
+
   def add_typed_inds(test: Boolean = false) {
-    val xref = AnnotationProperty("") // Better to pull than hard wire?
+    val xref = AnnotationProperty("http://www.geneontology.org/formats/oboInOwl#hasDbXref") // Better to pull than hard wire?
     val limit = if (test) {
       " limit 10"
-      } else {
-        ""
+    } else {
+      ""
     } // Should really make this into a separate function!
-    val cypher = s""""MATCH (c:Class)<-[r:INSTANCEOF|RELATED]-(i:Individual)-[:has_source]->(ds:DataSet)
+    val cypher = s"""MATCH (c:Class)<-[r:INSTANCEOF|Related]-(i:Individual)-[:has_source]->(ds:DataSet)
                   WHERE ds.label = '$dataset' 
                   WITH c,r,i
                   OPTIONAL MATCH (i)-[hs:has_site]-(s:Site)
                   RETURN c.iri, r.iri, i.iri, i.label, type(r) as rel_typ""" + limit
-    
+
     val results = this.session.run(cypher)
     while (results.hasNext()) {
       val record = results.next();
       val i = NamedIndividual(record.get("i.iri").asString)
       // TODO: call to function to check if i already in owl, add label if not
       val c = Class(record.get("c.iri").asString)
-      if (record.get("rel_type").asString == "INSTANCEOF") {
+      if (record.get("rel_typ").asString == "INSTANCEOF") {
+        print(s"""Adding $i Type $c \n""")
         this.bs.add_axiom(i Type c)
-      } else if (record.get("rel_type").asString == "RELATED") {
+      } else if (record.get("rel_typ").asString == "Related") {
         val r = ObjectProperty(record.get("r.iri").asString)
+        print(s"""Adding $i Type $r some $c \n""")
         this.bs.add_axiom(i Type (r some c))
       } else {
         /// Add in a warning or fail.
       }
       // if (record.get("hs.accession"))  - How to check truth - Return none type or perhaps none as text?
       // 
-      this.bs.add_axiom(i Annotation (xref, 
-          record.get("s.db").asString + ":" +  record.get("hs.accession").asString))
+      this.bs.add_axiom(i Annotation (xref,
+        record.get("s.db").asString + ":" + record.get("hs.accession").asString))
+    }
   }
- }
-    
+
   def add_facts(blacklist: Array[String], test: Boolean = false) {
     val limit = if (test) {
       " limit 10"
-      } else {
-        ""
+    } else {
+      ""
     }
     val cypher = s"""MATCH (c:Class)-[:INSTANCEOF]-(j:Individual)<-[r:RELATED]-(i:Individual)-[:has_source]->(ds:DataSet) " 
                   WHERE ds.label = '$dataset'"
-                  RETURN c.iri, i.iri, r.iri""" + limit  
+                  RETURN c.iri, i.iri, r.iri""" + limit
     val results = this.session.run(cypher)
     while (results.hasNext()) {
       // Add a step to check if c.class is on blacklist
@@ -103,13 +102,5 @@ class cypher2OWL(bs: BrainScowl, session: Session , dataset: String) {
 
     }
   }
-
-  
-  
   // Matching APs would be cool if poss...
-  
-  
-  
-  
-  
 }
