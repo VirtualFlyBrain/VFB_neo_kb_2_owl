@@ -21,7 +21,7 @@ class Cat extends Command(description = """
   var test = opt[Boolean](abbrev = "t", description = "Run in test mode (sets return limits on queries)")
 }
 
-object Main extends (App) {
+object main extends (App) {
   Cli.parse(args).withCommand(new Cat) {
     case cat =>
       val g = GraphDatabase.driver(cat.endpoint, AuthTokens.basic(cat.usr, cat.pwd))
