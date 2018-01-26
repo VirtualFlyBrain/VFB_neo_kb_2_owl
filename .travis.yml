@@ -10,5 +10,5 @@
 language: scala
 
 script:
-   - sbt run org.virtualflybrain.neo_kb_2_owl.Main -t --usr=neo4j --pwd=neo4j --ontology=resources/fbbt-simple.owl --endpoint='http://kb.virtualflybrain.org' --dataset='Cachero2010'
+   - sbt "org.virtualflybrain.neo_kb_2_owl" "run -t --usr=neo4j --pwd=neo4j --ontology=resources/fbbt-simple.owl --endpoint='http://kb.virtualflybrain.org' --dataset='Cachero2010'"
    
