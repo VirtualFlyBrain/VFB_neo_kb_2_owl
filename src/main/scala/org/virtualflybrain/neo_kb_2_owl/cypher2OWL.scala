@@ -48,7 +48,7 @@ class cypher2OWL(bs: BrainScowl, session: Session, dataset: String) {
       " limit 10"
     } else {
       ""
-    } // Should really make this into a separate function!
+    } // Should really make test status into a separate function!
     val cypher = s"""MATCH (c:Class)<-[r:INSTANCEOF|Related]-(i:Individual)-[:has_source]->(ds:DataSet)
                   WHERE ds.label = '$dataset' 
                   WITH c,r,i
@@ -77,29 +77,41 @@ class cypher2OWL(bs: BrainScowl, session: Session, dataset: String) {
         record.get("s.db").asString + ":" + record.get("hs.accession").asString))
     }
   }
-
+  
   def add_facts(blacklist: Array[String], test: Boolean = false) {
+    // Add facts. Optionally specify relations blacklist
     val limit = if (test) {
       " limit 10"
     } else {
       ""
     }
-    val cypher = s"""MATCH (c:Class)-[:INSTANCEOF]-(j:Individual)<-[r:RELATED]-(i:Individual)-[:has_source]->(ds:DataSet) " 
+    val cypher = s"""MATCH (c:Class)-[cr:INSTANCEOF:Related]-(j:Individual)<-[r:RELATED]-(i:Individual)-[:has_source]->(ds:DataSet) " 
                   WHERE ds.label = '$dataset'"
-                  RETURN c.iri, i.iri, r.iri""" + limit
+                  RETURN c.iri, i.iri, r.iri, type(r) as rel_typ""" + limit
     val results = this.session.run(cypher)
     while (results.hasNext()) {
-      // Add a step to check if c.class is on blacklist
       val record = results.next();
       if (!(blacklist contains record.get("r.iri").asString)) {
         val i = NamedIndividual(record.get("i.iri").asString)
         val j = NamedIndividual(record.get("j.iri").asString)
         val r = ObjectProperty(record.get("r.iri").asString)
         this.bs.add_axiom(i Fact (r, j))
-      }
-      //val c = Class(record.get("c.iri").asString)  // Should we deal with this here at all?
-      //this.bs.add_axiom(j Type (r some c))
-
+        // Adding typing to J: This needs some refactoring to pull out generic typing into new method.
+        val c = Class(record.get("c.iri").asString) 
+        if (record.get("rel_typ").asString == "INSTANCEOF") {
+          print(s"""Adding $i Type $c \n""")
+          this.bs.add_axiom(i Type c)
+        } else if (record.get("rel_typ").asString == "Related") {
+          val r = ObjectProperty(record.get("r.iri").asString)
+          print(s"""Adding $i Type $r some $c \n""")
+          this.bs.add_axiom(i Type (r some c))
+        } else {
+          /// Add in a warning or fail.
+        }
+        // if (record.get("hs.accession"))  - How to check truth - Return none type or perhaps none as text?
+        //       
+        this.bs.add_axiom(j Type c) // Extend to add anonymous class typing to object ind
+      }    
     }
   }
   // Matching APs would be cool if poss...
