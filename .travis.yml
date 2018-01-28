@@ -12,3 +12,4 @@ language: scala
 script:
    - sbt "run --usr=neo4j --pwd=neo4j --endpoint=bolt://kb.virtualflybrain.org:7688 --dataset=Chiang2010  --ontology=resources/fbbt-simple.owl "
  
+
