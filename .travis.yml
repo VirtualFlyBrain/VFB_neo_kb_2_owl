@@ -1,12 +1,3 @@
-#services:
-#  - docker
-  
-#script:
-#  - docker build -t test-image:test .
-#  - docker run -d --name test test-image:test
-#  - sleep 2m
-#  - docker logs test
-
 language: scala
 
 services:
