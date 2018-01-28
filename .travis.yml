@@ -10,6 +10,5 @@
 language: scala
 
 script:
-   - sbt run org.virtualflybrain.neo_kb_2_owl.Main
-   - sbt run org.virtualflybrain.neo_kb_2_owl.Main -t --endpoint='http://kb.virtualflybrain.org' dataset='Cachero2010'
-   
+   - sbt "run --usr=neo4j --pwd=neo4j --endpoint=bolt://kb.virtualflybrain.org:7688 --dataset=Chiang2010  --ontology=resources/fbbt-simple.owl "
+ 

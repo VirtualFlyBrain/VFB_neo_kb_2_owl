@@ -34,8 +34,9 @@ object Main extends (App) {
           Array[String]("http://xmlns.com/foaf/0.1/depicts")
         }
       // Make this an arg?
-      var vfb_owl = new BrainScowl(base + cat.dataset, base)
+      var vfb_owl = new BrainScowl(iri_string = base + cat.dataset, base_iri = base)
       var c2o = new cypher2OWL(vfb_owl, session, cat.dataset)
+      var fbbt = new BrainScowl(file_path = cat.ontology)
       c2o.add_typed_inds(cat.test)
       if (cat.facts) {
         c2o.add_facts(blacklist, cat.test)
@@ -43,14 +44,7 @@ object Main extends (App) {
       //val fbbt = new BrainScowl(file_path = cat.ontology)
       //var dw = new definition_writer(owl, fbbt)
       //dw.add_defs()
-      //owl.save(file_path = cat.dataset + ".owl", syntax = "ofn")
-      
-
-      //  var c20 = cypher2OWL(s, owl, d)  // datasets could have flags corresponding to particular scheme needs.  e.g. voxel overlap
-      //    c20.add_inds
-      //    c20.add_direct_named_types
-      //    c20.add_direct_anonymous_types
-      //    owl.save(file_path = cat.dataset + ".owl", syntax = "ofn")
+      vfb_owl.save(file_path = cat.dataset + ".owl", syntax = "ofn")
       session.close()
       g.close()
   }
