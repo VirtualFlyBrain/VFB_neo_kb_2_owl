@@ -38,6 +38,8 @@ object Main extends (App) {
       var c2o = new cypher2OWL(vfb_owl, session, cat.dataset)
       var fbbt = new BrainScowl(file_path = cat.ontology)
       c2o.add_typed_inds(cat.test)
+      c2o.add_annotations(cat.test)
+      c2o.add_xrefs(cat.test)
       if (cat.facts) {
         c2o.add_facts(blacklist, cat.test)
       }

@@ -3,6 +3,8 @@ import dosumis.brainscowl.BrainScowl
 import org.phenoscape.scowl
 import org.phenoscape.scowl._
 import org.neo4j.driver.v1._
+import scala.collection.JavaConversions._
+
 
 //* Notes: 
 // AIMS: generic translations of edges to owl using standard mapping
@@ -43,17 +45,15 @@ class cypher2OWL(bs: BrainScowl, session: Session, dataset: String) {
   // coming from connectomics data.
 
   def add_typed_inds(test: Boolean = false) {
-    val xref = AnnotationProperty("http://www.geneontology.org/formats/oboInOwl#hasDbXref") // Better to pull than hard wire?
+
     val limit = if (test) {
       " limit 10"
     } else {
       ""
     } // Should really make test status into a separate function!
     val cypher = s"""MATCH (c:Class)<-[r:INSTANCEOF|Related]-(i:Individual)-[:has_source]->(ds:DataSet)
-                  WHERE ds.label = '$dataset' 
-                  WITH c,r,i
-                  OPTIONAL MATCH (i)-[hs:has_site]-(s:Site)
-                  RETURN c.iri, r.iri, i.iri, i.label, type(r) as rel_typ""" + limit
+                  WHERE ds.short_form = '$dataset' 
+                  RETURN c.iri, r.iri, i.iri, type(r) as rel_typ""" + limit
 
     val results = this.session.run(cypher)
     while (results.hasNext()) {
@@ -66,17 +66,59 @@ class cypher2OWL(bs: BrainScowl, session: Session, dataset: String) {
         this.bs.add_axiom(i Type c)
       } else if (record.get("rel_typ").asString == "Related") {
         val r = ObjectProperty(record.get("r.iri").asString)
-        print(s"""Adding $i Type $r some $c \n""")
+        //print(s"""Adding $i Type $r some $c \n""")
         this.bs.add_axiom(i Type (r some c))
       } else {
         /// Add in a warning or fail.
       }
-      // if (record.get("hs.accession"))  - How to check truth - Return none type or perhaps none as text?
-      // 
-      this.bs.add_axiom(i Annotation (xref,
-        record.get("s.db").asString + ":" + record.get("hs.accession").asString))
+      // if (record.get("hs.accession"))  - How to check truth - Return none type or perhaps none as text
     }
   }
+  
+  def add_annotations(test: Boolean = false) {
+    val limit = if (test) {
+      " limit 10"
+    } else {
+      ""
+    } 
+    val label = AnnotationProperty("http://www.w3.org/2000/01/rdf-schema#label")
+    val comment = AnnotationProperty("http://www.w3.org/2000/01/rdf-schema#comment")
+    val synonym = AnnotationProperty("http://www.geneontology.org/formats/oboInOwl#hasExactSynonym")
+    val cypher = s"""MATCH (i:Individual)-[:has_source]->(ds:DataSet)
+                  WHERE ds.short_form = '$dataset' 
+                  RETURN i.iri, i.label, i.comment, i.synonyms""" + limit
+    val results = this.session.run(cypher)
+    while (results.hasNext()) {
+      val record = results.next();
+      val i = NamedIndividual(record.get("i.iri").asString)             
+      this.bs.add_axiom(i Annotation (label, record.get("i.label").asString()))
+      this.bs.add_axiom(i Annotation (comment, record.get("i.comment").asString()))
+      val syns = record.get("i.synonyms").asList.toArray
+      for (s <- syns) {
+          this.bs.add_axiom(i Annotation (synonym, s.toString))
+          }            
+     }
+   }
+  
+  def add_xrefs(test: Boolean = false) {
+    val limit = if (test) {
+      " limit 10"
+    } else {
+      ""
+    }
+    val xref = AnnotationProperty("http://www.w3.org/2000/01/rdf-schema#label")
+    val cypher = s"""MATCH (s:Site)<-[dbx:hasDbXref]-(i:Individual)-[:has_source]->(ds:DataSet)
+                  WHERE ds.short_form = '$dataset' 
+                  RETURN i.iri, i.label, i.comment""" + limit
+    val results = this.session.run(cypher)
+    while (results.hasNext()) {
+      val record = results.next();
+      val i = NamedIndividual(record.get("i.iri").asString)    
+      this.bs.add_axiom(i Annotation (xref,
+          record.get("s.db").asString + ":" + record.get("hs.accession").asString))
+    }
+  }
+
   
   def add_facts(blacklist: Array[String], test: Boolean = false) {
     // Add facts. Optionally specify relations blacklist
