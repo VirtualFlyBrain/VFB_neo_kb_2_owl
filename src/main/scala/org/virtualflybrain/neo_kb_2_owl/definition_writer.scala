@@ -3,7 +3,8 @@ import dosumis.brainscowl.BrainScowl
 import scala.collection.JavaConversions._
 import dosumis.brainscowl.obo_style._
 import org.semanticweb.owlapi.model._
-
+import scala.collection.mutable.ListBuffer
+import org.phenoscape.scowl._ 
 
 
 class definition_writer(ont: BrainScowl, fbbt: BrainScowl) {
@@ -11,69 +12,39 @@ class definition_writer(ont: BrainScowl, fbbt: BrainScowl) {
   // Something to find all individuals in signature
 
   def add_defs() {
-    // get all individuals in signature
-    // iterate over list, rolling def then adding annotation axioms. 
+    val defintion = AnnotationProperty("http://purl.obolibrary.org/obo/IAO_")
+    val inds = this.ont.ontology.getIndividualsInSignature()
+    for (i <- inds) {
+      val sf = ont.bi_sfp.getShortForm(i)
+      val ax = ont.add_axiom(i Annotation (defintion, roll_def(sf)))
+    } 
   }
   
   
 
-  def add_def(ind_short_form: String): String = {
-    var defn = ""
-    val typs = ont.getTypes(sfid = ind_short_form)
-    
+  def roll_def(ind_short_form: String): String = {
+    val typs = ont.getTypes(sfid = ind_short_form)   
     var genus = "" // Generic typing
     var	spec_genus = "" // Specific typing for use in def.
     var	po = ""
     var exp = ""
     var gender = ""
     for (typ <- typs) {
-       if (!typ.isAnonymous) {
-         
- //			if fbbt.isSuperClass('FBbt_00005106', parent_class, 0):
-  //				genus = 'neuron'
-  //				spec_genus = fbbt.getLabel(parent_class)
-  //			if (parent_class == 'FBbt_00005106'): # neuron
-  //				genus = 'neuron'
-  //				#			if parent_class == 'FBbt_00003624': # adult brain - hack for EP! change back once fixed on site!!!!!!!
-  //			if (parent_class == 'CARO_0030002'):
-  //				genus = 'expression pattern' 
-  //					# po = 'adult brain' # hack for EP! change back once fixed on site!!!!!!!
-  //			if fbbt.isSuperClass('FBbt_00007683', parent_class, 0) or (parent_class == 'FBbt_00007683') : # neuroblast lineage clone
-  //				genus = 'neuroblast lineage clone'
-  //				spec_genus = fbbt.getLabel(parent_class)
-         
-          val claz = ont.bi_sfp.getShortForm(typ.asOWLClass)
-          if (ont.getSuperClasses(claz).keys.contains("FBbt_00005106") or claz == "FBbt_00005106") {
-            val genus = "neuron"
-   				  val spec_genus = claz              
+       if (!typ.isAnonymous) {        
+         val claz = ont.bi_sfp.getShortForm(typ.asOWLClass)
+          if (ont.getSuperClasses(claz).keys.contains("FBbt_00005106") || claz == "FBbt_00005106") {
+            var genus = "neuron"
+   				  var spec_genus = claz              
           }
-          if (ont.getSuperClasses(claz).keys.contains("CARO_0030002") or claz == "CARO_0030002") {
-            val genus = "expression pattern"
-   				  val spec_genus = claz           
+          if (ont.getSuperClasses(claz).keys.contains("CARO_0030002") || claz == "CARO_0030002") {
+            var genus = "expression pattern"
+   				  var spec_genus = claz           
           }
-          if (ont.getSuperClasses(claz).keys.contains("FBbt_00007683") or claz == "FBbt_00007683") {
-            val genus = "neuroblast lineage clone"
-   				  val spec_genus = claz           
+          if (ont.getSuperClasses(claz).keys.contains("FBbt_00007683") || claz == "FBbt_00007683") {
+            var genus = "neuroblast lineage clone"
+   				  var spec_genus = claz           
           }
-       } else {
-         
-           //			if (rel == 'BFO_0000050') & ( object_class== 'FBbt_00003624'): # part of adult brain // Use pattern match?
-  //				po = 'adult brain'
-  //				if (rel == 'BFO_0000050') & (object_class == 'FBbt_00007004'): # part male organism
-  //					gender = 'M'
-  //			if (rel == 'BFO_0000050') & (object_class == 'FBbt_00007011'): # part female organism
-  //					gender = 'F'
-  //			if (rel == 'RO_0002292'): # expresses  X
-  //				if feat_ont.knowsClass(object_class):				
-  //					exp = feat_ont.getLabel(object_class)
-  //				else: 
-  //					warnings.warn("%s is not a valid class in fb_features.owl. Not rolling def." % object_class) # Requires declaration of expression pattern class
-  //				continue         
-         
-         // This section is a bit odd for relying only on direct assertion.
-         // If that's all we need then can be done with cypher anyway.
-         
-         
+       } else {         
          val rels = typ.getObjectPropertiesInSignature()
          val classes = typ.getClassesInSignature()
          val rel = if (rels.toArray.length == 1) {
@@ -95,12 +66,40 @@ class definition_writer(ont: BrainScowl, fbbt: BrainScowl) {
            "F"
          }
          val exp = if (rel ==  "RO_0002292") {
-          "" // Need to look up label expressed thingy
+          "fu" // Need to look up label expressed thingy
          }         
        }
-          
-  //def_comps = ['', '', '']
-  //	if genus == 'neuron':
+    }     
+     var def_comps = ListBuffer[String]()
+     if (genus == "neuron") {
+       if (!spec_genus.isEmpty()) {
+         def_comps(0) = s"A $spec_genus"
+       } else {
+  			 def_comps(0) = s"A $genus"
+       }
+       if (!exp.isEmpty()) {
+  			  def_comps(1) = s"expressing $exp"
+       }
+       if (!po.isEmpty()) {
+  			  def_comps(2) = s"that is part of an $po"
+       }
+     }
+     if (genus == "expression pattern") {
+       if (!po.isEmpty() && !exp.isEmpty()) {
+         def_comps(0) = s"An $po"
+       }
+     }
+     if (genus == "neuroblast lineage clone") {
+       if (!spec_genus.isEmpty()) {
+    			def_comps(0) = s"An example of a(n) $spec_genus"
+       }
+       if (!po.isEmpty()) {
+          def_comps(0) = "that is part of a(n) $po"
+       }
+     }
+    val def_pre = def_comps.mkString("")
+   return def_pre.stripSuffix(" ") + "."
+  }
   //		if spec_genus:
   //			def_comps[0] = "A %s" % spec_genus
   //		else:
@@ -124,8 +123,7 @@ class definition_writer(ont: BrainScowl, fbbt: BrainScowl) {
   //       }
   //     }
   //  }
-    return defn
-  }
+
 
   //  // Initialise with an FBbt brainscowl object to use for looking up classifications
   //  // But note - this will require extensions to brainscowl to bring in queries.

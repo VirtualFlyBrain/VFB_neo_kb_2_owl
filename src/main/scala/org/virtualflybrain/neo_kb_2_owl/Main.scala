@@ -43,9 +43,8 @@ object Main extends (App) {
       if (cat.facts) {
         c2o.add_facts(blacklist, cat.test)
       }
-      //val fbbt = new BrainScowl(file_path = cat.ontology)
-      //var dw = new definition_writer(owl, fbbt)
-      //dw.add_defs()
+      var dw = new definition_writer(vfb_owl, fbbt)
+      dw.add_defs()
       vfb_owl.save(file_path = cat.dataset + ".owl", syntax = "ofn")
       session.close()
       g.close()
