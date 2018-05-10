@@ -16,6 +16,7 @@ class definition_writer(ont: BrainScowl, fbbt: BrainScowl) {
     val inds = this.ont.ontology.getIndividualsInSignature()
     for (i <- inds) {
       val sf = ont.bi_sfp.getShortForm(i)
+      println(s"**** Defining $sf.")
       val ax = ont.add_axiom(i Annotation (defintion, roll_def(sf)))
     } 
   }
@@ -32,15 +33,15 @@ class definition_writer(ont: BrainScowl, fbbt: BrainScowl) {
     for (typ <- typs) {
        if (!typ.isAnonymous) {        
          val claz = ont.bi_sfp.getShortForm(typ.asOWLClass)
-          if (ont.getSuperClasses(claz).keys.contains("FBbt_00005106") || claz == "FBbt_00005106") {
+          if (claz == "FBbt_00005106" || ont.getSuperClasses(claz).keys.contains("FBbt_00005106")) {
             var genus = "neuron"
    				  var spec_genus = claz              
           }
-          if (ont.getSuperClasses(claz).keys.contains("CARO_0030002") || claz == "CARO_0030002") {
+          if (claz == "CARO_0030002" || ont.getSuperClasses(claz).keys.contains("CARO_0030002")) {
             var genus = "expression pattern"
    				  var spec_genus = claz           
           }
-          if (ont.getSuperClasses(claz).keys.contains("FBbt_00007683") || claz == "FBbt_00007683") {
+          if (claz == "FBbt_00007683" || ont.getSuperClasses(claz).keys.contains("FBbt_00007683")) {
             var genus = "neuroblast lineage clone"
    				  var spec_genus = claz           
           }
