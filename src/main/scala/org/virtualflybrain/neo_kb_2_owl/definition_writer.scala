@@ -17,7 +17,9 @@ class definition_writer(ont: BrainScowl, fbbt: BrainScowl) {
     for (i <- inds) {
       val sf = ont.bi_sfp.getShortForm(i)
       println(s"**** Defining $sf.")
-      val ax = ont.add_axiom(i Annotation (defintion, roll_def(sf)))
+      val defn = roll_def(sf)
+      println(defn)
+      val ax = ont.add_axiom(i Annotation (defintion, defn))
     } 
   }
   
