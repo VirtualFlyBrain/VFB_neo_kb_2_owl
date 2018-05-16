@@ -3,7 +3,7 @@ import dosumis.brainscowl.BrainScowl
 import scala.collection.JavaConversions._
 import dosumis.brainscowl.obo_style._
 import org.semanticweb.owlapi.model._
-import scala.collection.mutable.ListBuffer
+import scala.collection.mutable.ArrayBuffer
 import org.phenoscape.scowl._ 
 
 
@@ -18,7 +18,7 @@ class definition_writer(ont: BrainScowl, fbbt: BrainScowl) {
       val sf = ont.bi_sfp.getShortForm(i)
       println(s"**** Defining $sf.")
       val defn = roll_def(sf)
-      println(defn)
+      println(s"Def: $defn")
       val ax = ont.add_axiom(i Annotation (defintion, defn))
     } 
   }
@@ -33,19 +33,21 @@ class definition_writer(ont: BrainScowl, fbbt: BrainScowl) {
     var exp = ""
     var gender = ""
     for (typ <- typs) {
+      // Assumes single names parent class
        if (!typ.isAnonymous) {        
-         val claz = ont.bi_sfp.getShortForm(typ.asOWLClass)
+          val claz = ont.bi_sfp.getShortForm(typ.asOWLClass)
+          println(claz)
+          val labels = fbbt.getLabels(claz)
+          spec_genus =  if (labels.length > 0) { labels(0) } else { "" }
+          println(spec_genus)
           if (claz == "FBbt_00005106" || ont.getSuperClasses(claz).keys.contains("FBbt_00005106")) {
-            var genus = "neuron"
-   				  var spec_genus = claz              
+            genus = "neuron"
           }
           if (claz == "CARO_0030002" || ont.getSuperClasses(claz).keys.contains("CARO_0030002")) {
-            var genus = "expression pattern"
-   				  var spec_genus = claz           
+            genus = "expression pattern"
           }
           if (claz == "FBbt_00007683" || ont.getSuperClasses(claz).keys.contains("FBbt_00007683")) {
-            var genus = "neuroblast lineage clone"
-   				  var spec_genus = claz           
+            genus = "neuroblast lineage clone"       
           }
        } else {         
          val rels = typ.getObjectPropertiesInSignature()
@@ -53,55 +55,59 @@ class definition_writer(ont: BrainScowl, fbbt: BrainScowl) {
          val rel = if (rels.toArray.length == 1) {
            ont.bi_sfp.getShortForm(rels.last).toString()
          } else {
+           // Throw exception of warning
            ""
          }
          val claz = if (classes.toArray.length == 1) {
            ont.bi_sfp.getShortForm(classes.last).toString()
          } else {
+                     // Throw exception of warning
            ""
          }
-         val po = if ((rel == "BFO_0000050") && (claz == "FBbt_00003624")) {
+         po = if ((rel == "BFO_0000050") && (claz == "FBbt_00003624")) {
            "adult brain"
-         }
-         val gender = if ((rel ==  "BFO_0000050") && (claz == "FBbt_00007004")) {
+         } else { "" }
+         gender = if ((rel ==  "BFO_0000050") && (claz == "FBbt_00007004")) {
            "M"
          } else if ((rel ==  "BFO_0000050") && (claz == "FBbt_00007011"))  {
            "F"
-         }
-         val exp = if (rel ==  "RO_0002292") {
-          "fu" // Need to look up label expressed thingy
-         }         
+         } else { "" }
+         exp = if (rel ==  "RO_0002292") {
+          "fu" // Need to look up label expressed thingy // Requires feature ont to be loaded.
+         } else { "" }        
        }
-    }     
-     var def_comps = ListBuffer[String]()
+    }
+     var defn = ""
      if (genus == "neuron") {
        if (!spec_genus.isEmpty()) {
-         def_comps(0) = s"A $spec_genus"
+          defn += s"A $spec_genus"
        } else {
-  			 def_comps(0) = s"A $genus"
+  			 defn += s"A $genus"
        }
        if (!exp.isEmpty()) {
-  			  def_comps(1) = s"expressing $exp"
+  			  defn += s" expressing $exp"
        }
        if (!po.isEmpty()) {
-  			  def_comps(2) = s"that is part of an $po"
+  			  defn += s" that is part of an $po"
        }
      }
      if (genus == "expression pattern") {
        if (!po.isEmpty() && !exp.isEmpty()) {
-         def_comps(0) = s"An $po"
+         defn += s"An $po"
+       }
+       if (!exp.isEmpty()) {
+  			  defn += s" expressing $exp"
        }
      }
      if (genus == "neuroblast lineage clone") {
        if (!spec_genus.isEmpty()) {
-    			def_comps(0) = s"An example of a(n) $spec_genus"
+    			defn += s"An example of a(n) $spec_genus"
        }
        if (!po.isEmpty()) {
-          def_comps(0) = "that is part of a(n) $po"
+          defn += s" that is part of a(n) $po"
        }
      }
-    val def_pre = def_comps.mkString("")
-   return def_pre.stripSuffix(" ") + "."
+    return defn + "."
   }
   //		if spec_genus:
   //			def_comps[0] = "A %s" % spec_genus
