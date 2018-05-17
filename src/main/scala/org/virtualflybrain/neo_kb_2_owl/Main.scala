@@ -34,10 +34,11 @@ object Main extends (App) {
           Array[String]("http://xmlns.com/foaf/0.1/depicts")
         }
       // Make this an arg?
-      var vfb_owl = new BrainScowl(iri_string = base + cat.dataset, base_iri = base)
+      val ds = cat.dataset
+      var vfb_owl = new BrainScowl(iri_string = base + ds, base_iri = base)
       var c2o = new cypher2OWL(vfb_owl, session, cat.dataset)
       var fbbt = new BrainScowl(file_path = cat.ontology)
-      println(s"*** Processing $cat.dataset")
+      println(s"*** Processing $ds")
       println("*** Adding typed inds")
       c2o.add_typed_inds(cat.test)
       println("*** Adding Annotations")
@@ -51,7 +52,7 @@ object Main extends (App) {
       var dw = new definition_writer(vfb_owl, fbbt)
       println("*** Adding defs")
       dw.add_defs()
-      vfb_owl.save(file_path = cat.dataset + ".owl", syntax = "ofn")
+      vfb_owl.save(file_path = ds + ".owl", syntax = "ofn")
       session.close()
       g.close()
   }
