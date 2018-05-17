@@ -17,6 +17,9 @@ class Cat extends Command(description = """
   var ontology = arg[String](description = "Path to reference ontology used in build.") // Should be URI but work needed on BrainScowl loader
   var facts = opt[Boolean](abbrev = "f", description = "Set to add facts")
   var include_images = opt[Boolean](abbrev = "i", description = "Set to include individuals.")
+  var infer_overlaps = opt[Boolean](abbrev = "io", description = """Infer overlaps between individual neurons and 
+                                                                    neuropil classes based on voxel overlaps 
+                                                                    between individuals""")  // Modify to allow cutoff spec?
   var syntax = opt[String](description = "Syntax of output file.", default = "ofn")
   var test = opt[Boolean](abbrev = "t", description = "Run in test mode (sets return limits on queries)")
 }
@@ -42,6 +45,9 @@ object Main extends (App) {
       c2o.add_xrefs(cat.test)
       if (cat.facts) {
         c2o.add_facts(blacklist, cat.test)
+      }
+      if (cat.infer_overlaps) { 
+        c2o.infer_overlap_from_channels(cutoff = 1000, dataset = cat.dataset)
       }
       //val fbbt = new BrainScowl(file_path = cat.ontology)
       //var dw = new definition_writer(owl, fbbt)
