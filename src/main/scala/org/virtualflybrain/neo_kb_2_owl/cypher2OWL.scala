@@ -90,13 +90,19 @@ class cypher2OWL(bs: BrainScowl, session: Session, dataset: String) {
     val results = this.session.run(cypher)
     while (results.hasNext()) {
       val record = results.next();
-      val i = NamedIndividual(record.get("i.iri").asString)             
-      this.bs.add_axiom(i Annotation (label, record.get("i.label").asString()))
-      this.bs.add_axiom(i Annotation (comment, record.get("i.comment").asString()))
-      val syns = record.get("i.synonyms").asList.toArray
-      for (s <- syns) {
-          this.bs.add_axiom(i Annotation (synonym, s.toString))
-          }            
+      val i = NamedIndividual(record.get("i.iri").asString)
+      if (!record.get("i.label").isNull()) {
+        this.bs.add_axiom(i Annotation (label, record.get("i.label").asString()))
+      }
+      if (!record.get("i.comment").isNull()) {
+        this.bs.add_axiom(i Annotation (comment, record.get("i.comment").asString()))
+      }
+      if (!record.get("i.synonyms").isNull()) {
+        val syns = record.get("i.synonyms").asList.toArray
+        for (s <- syns) {
+            this.bs.add_axiom(i Annotation (synonym, s.toString))
+            }
+        }
      }
    }
   
@@ -109,13 +115,13 @@ class cypher2OWL(bs: BrainScowl, session: Session, dataset: String) {
     val xref = AnnotationProperty("http://www.w3.org/2000/01/rdf-schema#label")
     val cypher = s"""MATCH (s:Site)<-[dbx:hasDbXref]-(i:Individual)-[:has_source]->(ds:DataSet)
                   WHERE ds.short_form = '$dataset' 
-                  RETURN i.iri, i.label, i.comment""" + limit
+                  RETURN i.iri, s.db, dbx.accession""" + limit
     val results = this.session.run(cypher)
     while (results.hasNext()) {
       val record = results.next();
       val i = NamedIndividual(record.get("i.iri").asString)    
       this.bs.add_axiom(i Annotation (xref,
-          record.get("s.db").asString + ":" + record.get("hs.accession").asString))
+          record.get("s.db").asString + ":" + record.get("dbx.accession").asString))
     }
   }
 
