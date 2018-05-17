@@ -17,6 +17,9 @@ class Cat extends Command(description = """
   var ontology = arg[String](description = "Path to reference ontology used in build.") // Should be URI but work needed on BrainScowl loader
   var facts = opt[Boolean](abbrev = "f", description = "Set to add facts")
   var include_images = opt[Boolean](abbrev = "i", description = "Set to include individuals.")
+  var infer_overlaps = opt[Boolean](abbrev = "io", description = """Infer overlaps between individual neurons and 
+                                                                    neuropil classes based on voxel overlaps 
+                                                                    between individuals""")  // Modify to allow cutoff spec?
   var syntax = opt[String](description = "Syntax of output file.", default = "ofn")
   var test = opt[Boolean](abbrev = "t", description = "Run in test mode (sets return limits on queries)")
 }
@@ -52,7 +55,10 @@ object Main extends (App) {
       var dw = new definition_writer(vfb_owl, fbbt)
       println("*** Adding defs")
       dw.add_defs()
-      vfb_owl.save(file_path = ds + ".owl", syntax = "ofn")
+      if (cat.infer_overlaps) { 
+        c2o.infer_overlap_from_channels(cutoff = 1000, dataset = ds)
+      }
+      vfb_owl.save(file_path = cat.dataset + ".owl", syntax = "ofn")
       session.close()
       g.close()
   }
