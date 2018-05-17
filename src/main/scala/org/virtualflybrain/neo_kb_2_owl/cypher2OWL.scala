@@ -91,12 +91,14 @@ class cypher2OWL(bs: BrainScowl, session: Session, dataset: String) {
     while (results.hasNext()) {
       val record = results.next();
       val i = NamedIndividual(record.get("i.iri").asString)             
-      this.bs.add_axiom(i Annotation (label, record.get("i.label").asString()))
+      this.bs.add_axiom(i Annotation (label, record.get("i.label").asString())) // Brittle - assumed label present?
       this.bs.add_axiom(i Annotation (comment, record.get("i.comment").asString()))
-      val syns = record.get("i.synonyms").asList.toArray
-      for (s <- syns) {
-          this.bs.add_axiom(i Annotation (synonym, s.toString))
-          }            
+      if (record.get("i.synonyms") != null) {
+        val syns = record.get("i.synonyms").asList.toArray
+        for (s <- syns) {
+            this.bs.add_axiom(i Annotation (synonym, s.toString))
+            }
+       }
      }
    }
   
