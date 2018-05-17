@@ -63,7 +63,7 @@ class cypher2OWL(bs: BrainScowl, session: Session, dataset: String) {
       // TODO: call to function to check if i already in owl, add label if not
       val c = Class(record.get("c.iri").asString)
       if (record.get("rel_typ").asString == "INSTANCEOF") {
-        print(s"""Adding $i Type $c \n""")
+        //print(s"""Adding $i Type $c \n""")
         this.bs.add_axiom(i Type c)
       } else if (record.get("rel_typ").asString == "Related") {
         val r = ObjectProperty(record.get("r.iri").asString)
@@ -103,7 +103,7 @@ class cypher2OWL(bs: BrainScowl, session: Session, dataset: String) {
         for (s <- syns) {
             this.bs.add_axiom(i Annotation (synonym, s.toString))
             }
-        }
+       }
      }
    }
   
@@ -251,11 +251,11 @@ class cypher2OWL(bs: BrainScowl, session: Session, dataset: String) {
         // Adding typing to J: This needs some refactoring to pull out generic typing into new method.
         val c = Class(record.get("c.iri").asString) 
         if (record.get("rel_typ").asString == "INSTANCEOF") {
-          print(s"""Adding $i Type $c \n""")
+          //print(s"""Adding $i Type $c \n""")
           this.bs.add_axiom(i Type c)
         } else if (record.get("rel_typ").asString == "Related") {
           val r = ObjectProperty(record.get("r.iri").asString)
-          print(s"""Adding $i Type $r some $c \n""")
+          //print(s"""Adding $i Type $r some $c \n""")
           this.bs.add_axiom(i Type (r some c))
         } else {
           /// Add in a warning or fail.

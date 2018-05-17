@@ -37,21 +37,27 @@ object Main extends (App) {
           Array[String]("http://xmlns.com/foaf/0.1/depicts")
         }
       // Make this an arg?
-      var vfb_owl = new BrainScowl(iri_string = base + cat.dataset, base_iri = base)
+      val ds = cat.dataset
+      var vfb_owl = new BrainScowl(iri_string = base + ds, base_iri = base)
       var c2o = new cypher2OWL(vfb_owl, session, cat.dataset)
       var fbbt = new BrainScowl(file_path = cat.ontology)
+      println(s"*** Processing $ds")
+      println("*** Adding typed inds")
       c2o.add_typed_inds(cat.test)
+      println("*** Adding Annotations")
       c2o.add_annotations(cat.test)
+      println("*** Adding xrefs")
       c2o.add_xrefs(cat.test)
       if (cat.facts) {
+        println("*** Adding facts")
         c2o.add_facts(blacklist, cat.test)
       }
+      var dw = new definition_writer(vfb_owl, fbbt)
+      println("*** Adding defs")
+      dw.add_defs()
       if (cat.infer_overlaps) { 
-        c2o.infer_overlap_from_channels(cutoff = 1000, dataset = cat.dataset)
+        c2o.infer_overlap_from_channels(cutoff = 1000, dataset = ds)
       }
-      //val fbbt = new BrainScowl(file_path = cat.ontology)
-      //var dw = new definition_writer(owl, fbbt)
-      //dw.add_defs()
       vfb_owl.save(file_path = cat.dataset + ".owl", syntax = "ofn")
       session.close()
       g.close()
