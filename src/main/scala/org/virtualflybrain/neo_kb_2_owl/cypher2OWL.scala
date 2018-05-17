@@ -130,14 +130,15 @@ class cypher2OWL(bs: BrainScowl, session: Session, dataset: String) {
       )  
   
   def infer_overlap_from_channels(cutoff: Int, dataset: String) {
-    val cypher = s"""MATCH (ds:DataSet { short_form: '$dataset')<-[:has_source]-(neuron:Individual)<-[:Related { short_form: 'depicts' }]-(s:Individual) 
+    val cypher = s"""MATCH (ds:DataSet { short_form: '$dataset' })<-[:has_source]-(neuron:Individual)
+    -[:Related { short_form: 'depicts' }]->(s:Individual) 
 		-[re:Related]->(o:Individual)-[:Related { short_form: 'depicts' }]->(x) 
 		-[:INSTANCEOF]->(neuropil_class:Class) 
 		WHERE re.label = 'overlaps' 
 		AND ((re.voxel_overlap_left > $cutoff)  
 		OR (re.voxel_overlap_right > $cutoff) 
-		OR (re.voxel_overlap_center > $cutoff))
-		RETURN properties(re) as voxel_overlap, neuron.short_form, neuron.iri, neuron.label
+		OR (re.voxel_overlap_center > $cutoff)) 
+		RETURN properties(re) as voxel_overlap, neuron.short_form, neuron.iri, neuron.label,
 		neuropil_class.short_form, neuropil_class.iri, neuropil_class.label, 
 		o.label as neuropil_channel_name"""
     val results = this.session.run(cypher)
