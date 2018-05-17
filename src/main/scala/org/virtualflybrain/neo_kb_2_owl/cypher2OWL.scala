@@ -236,8 +236,9 @@ class cypher2OWL(bs: BrainScowl, session: Session, dataset: String) {
     } else {
       ""
     }
-    val cypher = s"""MATCH (c:Class)-[cr:INSTANCEOF:Related]-(j:Individual)<-[r:RELATED]-(i:Individual)-[:has_source]->(ds:DataSet) " 
-                  WHERE ds.label = '$dataset'"
+    val cypher = s"""MATCH (c:Class)-[cr:INSTANCEOF|Related]-(j:Individual)
+                  <-[r:RELATED]-(i:Individual)-[:has_source]->(ds:DataSet) 
+                  WHERE ds.label = '$dataset' 
                   RETURN c.iri, i.iri, r.iri, type(r) as rel_typ""" + limit
     val results = this.session.run(cypher)
     while (results.hasNext()) {
