@@ -1,4 +1,5 @@
 package org.virtualflybrain.neo_kb_2_owl
+import scala.collection._
 import dosumis.brainscowl.BrainScowl
 import org.phenoscape.scowl
 import org.phenoscape.scowl._
@@ -124,6 +125,108 @@ class cypher2OWL(bs: BrainScowl, session: Session, dataset: String) {
           record.get("s.db").asString + ":" + record.get("dbx.accession").asString))
     }
   }
+  
+  case class Overlap(
+      neuropil_class_iri: String,
+      neuropil_class_label: String,
+      neuropil_channel_name: String,
+      left: String,
+      right: String,
+      center: String
+      )  
+  
+  def infer_overlap_from_channels(cutoff: Int, dataset: String) {
+    val cypher = s"""MATCH (ds:DataSet { short_form: '$dataset' })<-[:has_source]-(neuron:Individual)
+    -[:Related { short_form: 'depicts' }]->(s:Individual) 
+		-[re:Related]->(o:Individual)-[:Related { short_form: 'depicts' }]->(x) 
+		-[:INSTANCEOF]->(neuropil_class:Class) 
+		WHERE re.label = 'overlaps' 
+		AND ((re.voxel_overlap_left > $cutoff)  
+		OR (re.voxel_overlap_right > $cutoff) 
+		OR (re.voxel_overlap_center > $cutoff)) 
+		RETURN properties(re) as voxel_overlap, neuron.short_form, neuron.iri, neuron.label,
+		neuropil_class.short_form, neuropil_class.iri, neuropil_class.label, 
+		o.label as neuropil_channel_name"""
+    val results = this.session.run(cypher)
+    ////	# Intermediate data-structures to add neuropils and iterate over neurons
+    //	overlap_by_neuron = {}
+    //	all_neuropils = set()
+    //	for o in overlap_results:
+    //		n = o['neuron.short_form']
+    //		d = {'neuropil' : o['neuropil_class.short_form'],
+    //			'voxel_overlap' : o['voxel_overlap']}
+    //		all_neuropils.add(o['neuropil_class.iri'])
+    //		if not (n in overlap_by_neuron.keys()):
+    //			overlap_by_neuron[n] = []
+    //		overlap_by_neuron[n].append(d)
+    // A literal translation of python is quite painfull!
+    // better to make case class ?
+		var overlap_by_neuron = mutable.Map[String, mutable.ArrayBuffer[Overlap]]()
+		var all_neuropils = mutable.Set[String]()
+		while (results.hasNext()) {
+      val record = results.next();
+      val n = record.get("neuron.iri").asString()
+      val vo = record.get("voxel_overlap").asMap
+      val d = Overlap(neuropil_class_iri = record.get("neuropil_class.iri").asString,
+                     neuropil_class_label =  record.get("neuropil_class.iri").asString,
+                     neuropil_channel_name = record.get("neuropil_channel_name").asString,
+                     left = if (vo.keys.contains("voxel_overlap_center")) {
+                       vo("voxel_overlap_left").toString
+                       } else { "0" },
+                     right = if (vo.keys.contains("voxel_overlap_right")) {
+                       vo("voxel_overlap_right").toString
+                       } else { "0" },
+                     center = if (vo.keys.contains("voxel_overlap_center")) {
+                       vo("voxel_overlap_center").toString
+                       } else { "0" }
+                      )
+                  
+                     
+                 // voxel overlap should be float!
+      all_neuropils.add(record.get("neuropil_class.iri").asString())
+      if (!overlap_by_neuron.contains(n)) {
+//          overlap_by_neuron(n) = mutable.ArrayBuffer[String]()
+//        } else {
+          overlap_by_neuron(n).append(d)
+        }  
+      }
+//	vokeys = {'voxel_overlap_left': 'left', 
+//		'voxel_overlap_right' : 'right', 
+//		'voxel_overlap_center': ''}    
+//    val vokeys = Map("voxel_overlap_left" -> "left",
+//                    "voxel_overlap_right" -> "right", 
+//                    "voxel_overlap_center" -> "")
+//	for neuron, overlaps in overlap_by_neuron.items():
+//		neuron_overlap_txt  = []
+//		# Iterate over neuropils.
+//		for o in overlaps:
+//			voxel_overlap = o['voxel_overlap'] 
+//			typ = "RO_0002131 some %s" % o['neuropil']
+//			vfb_ind.type(typ,neuron)
+//			txt = "Overlap of %s inferred from " % fbbt.getLabel(o['neuropil'])
+//			vo_data = []
+//			for k,v in vokeys.items():
+//				if k in voxel_overlap.keys() and voxel_overlap[k] > cutoff:
+//					vo_data.append(
+//						"%d voxel overlap of the %s %s"  % (voxel_overlap[k], 
+//														v, fbbt.getLabel(o['neuropil']))) # Better to ref painted domain?
+//			neuron_overlap_txt.append(txt + ', '.join(vo_data))
+//		vfb_ind.comment(neuron, '. '.join(neuron_overlap_txt) + '.')
+    val ro_overlap = ObjectProperty("http://purl.obo.obrary.org/obo/RO_0002131")
+    for ((neuron, overlaps) <- overlap_by_neuron.toIterable) {
+       var neuron_overlap_txt = mutable.ArrayBuffer[String]()
+       val n = NamedIndividual(neuron)
+       for (o <- overlaps) {
+         val c = Class(o.neuropil_class_iri)
+         val channel_name = o.neuropil_channel_name
+         val class_label = o.neuropil_class_label
+         val txt = s"""Overlap of $class_label inferred from voxel overlap of
+                       $channel_name: 
+                       left: $o.left, right: $o.right, center: $o.center."""  // Ideally this will be edge annotation but for now we'll make it cat comment
+         bs.add_axiom(n Type (ro_overlap some c))
+       }
+       }
+    }
 
   
   def add_facts(blacklist: Array[String], test: Boolean = false) {
