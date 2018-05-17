@@ -14,6 +14,6 @@ before_install:
 
 
 script:
-   - sbt "run -io --usr=neo4j --pwd=test --endpoint=bolt://192.168.0.2:7687 --dataset=Chiang2010  --ontology=resources/fbbt-simple.owl "
+   - sbt "run -io -t --usr=neo4j --pwd=test --endpoint=bolt://192.168.0.2:7687 --dataset=Chiang2010  --ontology=resources/fbbt-simple.owl "
  
 
