@@ -109,8 +109,8 @@ class cypher2OWL(bs: BrainScowl, support_ont: BrainScowl, session: Session, data
         this.bs.add_axiom(i Annotation (label, lab.asString()))
       }
       val comm = record.get("i.comment")
-      if (!lab.isNull()) {
-        this.bs.add_axiom(i Annotation (comment, lab.asString()))
+      if (!comm.isNull()) {
+        this.bs.add_axiom(i Annotation (comment, comm.asString()))
       }
       val synrec = record.get("i.synonyms")
       if (!synrec.isNull()) {
@@ -153,7 +153,7 @@ class cypher2OWL(bs: BrainScowl, support_ont: BrainScowl, session: Session, data
   
   def infer_overlap_from_channels(cutoff: Int, test: Boolean = false) {
     val cypher = s"""MATCH (ds:DataSet { short_form: '$dataset' })<-[:has_source]-(neuron:Individual)
-    -[:Related { short_form: 'depicts' }]->(s:Individual) 
+    <-[:Related { short_form: 'depicts' }]-(s:Individual) 
 		-[re:Related]->(o:Individual)-[:Related { short_form: 'depicts' }]->(x) 
 		-[:INSTANCEOF]->(neuropil_class:Class) 
 		WHERE re.label = 'overlaps' 
@@ -186,7 +186,7 @@ class cypher2OWL(bs: BrainScowl, support_ont: BrainScowl, session: Session, data
       val d = Overlap(neuropil_class_iri = record.get("neuropil_class.iri").asString,
                      neuropil_class_label =  record.get("neuropil_class.label").asString,
                      neuropil_channel_name = record.get("neuropil_channel_name").asString,
-                     left = if (vo.keys.contains("voxel_overlap_center")) {
+                     left = if (vo.keys.contains("voxel_overlap_left")) {
                        vo("voxel_overlap_left").toString
                        } else { "0" },
                      right = if (vo.keys.contains("voxel_overlap_right")) {
@@ -196,40 +196,14 @@ class cypher2OWL(bs: BrainScowl, support_ont: BrainScowl, session: Session, data
                        vo("voxel_overlap_center").toString
                        } else { "0" }
                       )
-                  
-                     
-                 // voxel overlap should be float!
       all_neuropils.add(record.get("neuropil_class.iri").asString())
       if (!overlap_by_neuron.contains(n)) {
-//          overlap_by_neuron(n) = mutable.ArrayBuffer[String]()
-//        } else {
-          overlap_by_neuron(n).append(d)
-        }  
+        overlap_by_neuron(n) = mutable.ArrayBuffer[Overlap]()
+        }
+        overlap_by_neuron(n).add(d)
       }
-//	vokeys = {'voxel_overlap_left': 'left', 
-//		'voxel_overlap_right' : 'right', 
-//		'voxel_overlap_center': ''}    
-//    val vokeys = Map("voxel_overlap_left" -> "left",
-//                    "voxel_overlap_right" -> "right", 
-//                    "voxel_overlap_center" -> "")
-//	for neuron, overlaps in overlap_by_neuron.items():
-//		neuron_overlap_txt  = []
-//		# Iterate over neuropils.
-//		for o in overlaps:
-//			voxel_overlap = o['voxel_overlap'] 
-//			typ = "RO_0002131 some %s" % o['neuropil']
-//			vfb_ind.type(typ,neuron)
-//			txt = "Overlap of %s inferred from " % fbbt.getLabel(o['neuropil'])
-//			vo_data = []
-//			for k,v in vokeys.items():
-//				if k in voxel_overlap.keys() and voxel_overlap[k] > cutoff:
-//					vo_data.append(
-//						"%d voxel overlap of the %s %s"  % (voxel_overlap[k], 
-//														v, fbbt.getLabel(o['neuropil']))) # Better to ref painted domain?
-//			neuron_overlap_txt.append(txt + ', '.join(vo_data))
-//		vfb_ind.comment(neuron, '. '.join(neuron_overlap_txt) + '.')
     val ro_overlap = ObjectProperty("http://purl.obo.obrary.org/obo/RO_0002131")
-    for ((neuron, overlaps) <- overlap_by_neuron.toIterable) {
+    for ((neuron, overlaps) <- overlap_by_neuron) {
        var neuron_overlap_txt = mutable.ArrayBuffer[String]()
        val n = NamedIndividual(neuron)
        for (o <- overlaps) {
