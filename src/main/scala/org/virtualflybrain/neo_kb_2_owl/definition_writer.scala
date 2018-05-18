@@ -1,24 +1,138 @@
 package org.virtualflybrain.neo_kb_2_owl
 import dosumis.brainscowl.BrainScowl
+import scala.collection.JavaConversions._
+import dosumis.brainscowl.obo_style._
+import org.semanticweb.owlapi.model._
+import scala.collection.mutable.ArrayBuffer
+import org.phenoscape.scowl._ 
+
 
 class definition_writer(ont: BrainScowl, fbbt: BrainScowl) {
 
   // Something to find all individuals in signature
 
   def add_defs() {
-    // get all individuals in signature
-    // iterate over list, making def then adding annotation axiom. 
+    val defintion = AnnotationProperty("http://purl.obolibrary.org/obo/IAO_")
+    val inds = this.ont.ontology.getIndividualsInSignature()
+    for (i <- inds) {
+      val sf = ont.bi_sfp.getShortForm(i)
+      println(s"**** Defining $sf.")
+      val defn = roll_def(sf)
+      println(s"Def: $defn")
+      val ax = ont.add_axiom(i Annotation (defintion, defn))
+    } 
   }
+  
+  
 
-  def add_def(ind_short_form: String): String = {
-    var defn = ""
-    val typs = ont.getTypes(sfid = ind_short_form)
+  def roll_def(ind_short_form: String): String = {
+    val typs = ont.getTypes(sfid = ind_short_form)   
+    var genus = "" // Generic typing
+    var	spec_genus = "" // Specific typing for use in def.
+    var	po = ""
+    var exp = ""
+    var gender = ""
     for (typ <- typs) {
-      // Use pattern matching rather than simple class expression pattern?
-
+      // Assumes single names parent class
+       if (!typ.isAnonymous) {        
+          val claz = ont.bi_sfp.getShortForm(typ.asOWLClass)
+          println(claz)
+          val labels = fbbt.getLabels(claz)
+          spec_genus =  if (labels.length > 0) { labels(0) } else { "" }
+          println(spec_genus)
+          if (claz == "FBbt_00005106" || ont.getSuperClasses(claz).keys.contains("FBbt_00005106")) {
+            genus = "neuron"
+          }
+          if (claz == "CARO_0030002" || ont.getSuperClasses(claz).keys.contains("CARO_0030002")) {
+            genus = "expression pattern"
+          }
+          if (claz == "FBbt_00007683" || ont.getSuperClasses(claz).keys.contains("FBbt_00007683")) {
+            genus = "neuroblast lineage clone"       
+          }
+       } else {         
+         val rels = typ.getObjectPropertiesInSignature()
+         val classes = typ.getClassesInSignature()
+         val rel = if (rels.toArray.length == 1) {
+           ont.bi_sfp.getShortForm(rels.last).toString()
+         } else {
+           // Throw exception of warning
+           ""
+         }
+         val claz = if (classes.toArray.length == 1) {
+           ont.bi_sfp.getShortForm(classes.last).toString()
+         } else {
+                     // Throw exception of warning
+           ""
+         }
+         po = if ((rel == "BFO_0000050") && (claz == "FBbt_00003624")) {
+           "adult brain"
+         } else { "" }
+         gender = if ((rel ==  "BFO_0000050") && (claz == "FBbt_00007004")) {
+           "M"
+         } else if ((rel ==  "BFO_0000050") && (claz == "FBbt_00007011"))  {
+           "F"
+         } else { "" }
+         exp = if (rel ==  "RO_0002292") {
+          "fu" // Need to look up label expressed thingy // Requires feature ont to be loaded.
+         } else { "" }        
+       }
     }
-    return defn
+     var defn = ""
+     if (genus == "neuron") {
+       if (!spec_genus.isEmpty()) {
+          defn += s"A $spec_genus"
+       } else {
+  			 defn += s"A $genus"
+       }
+       if (!exp.isEmpty()) {
+  			  defn += s" expressing $exp"
+       }
+       if (!po.isEmpty()) {
+  			  defn += s" that is part of an $po"
+       }
+     }
+     if (genus == "expression pattern") {
+       if (!po.isEmpty() && !exp.isEmpty()) {
+         defn += s"An $po"
+       }
+       if (!exp.isEmpty()) {
+  			  defn += s" expressing $exp"
+       }
+     }
+     if (genus == "neuroblast lineage clone") {
+       if (!spec_genus.isEmpty()) {
+    			defn += s"An example of a(n) $spec_genus"
+       }
+       if (!po.isEmpty()) {
+          defn += s" that is part of a(n) $po"
+       }
+     }
+    return defn + "."
   }
+  //		if spec_genus:
+  //			def_comps[0] = "A %s" % spec_genus
+  //		else:
+  //			def_comps[0] = "A %s" % genus
+  //		if exp:
+  //			def_comps[1] = 'expressing %s' % exp
+  //		if po:
+  //			def_comps[2] = 'that is part of an %s' % po
+  //	elif genus == 'expression pattern':
+  //		if po and exp:
+  //			def_comps[0] = "An %s" % po
+  //			def_comps[1] = "expressing %s" % exp
+  //	elif genus == 'neuroblast lineage clone':
+  //		if spec_genus:
+  //			def_comps[0] = "An example of a(n) %s" % spec_genus
+  //		if po:
+  //			def_comps[1] = "that is part of a(n) %s" % spec_genus			
+  //	def_pre = ' '.join(def_comps)
+  //	defn = def_pre.strip()  + '.'
+  //	return defn           
+  //       }
+  //     }
+  //  }
+
 
   //  // Initialise with an FBbt brainscowl object to use for looking up classifications
   //  // But note - this will require extensions to brainscowl to bring in queries.
