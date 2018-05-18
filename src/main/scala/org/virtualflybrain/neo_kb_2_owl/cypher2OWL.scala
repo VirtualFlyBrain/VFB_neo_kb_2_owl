@@ -26,8 +26,8 @@ import scala.collection.JavaConversions._
 // Xref writer
 // Needs cycle over
 
-class cypher2OWL(bs: BrainScowl, session: Session, dataset: String) {
-
+class cypher2OWL(bs: BrainScowl, support_ont: BrainScowl, session: Session, dataset: String) {
+  
   // constructor should include new Brainscowl object
 
   // Restricting to a single dataset is hard without encoding more of the schema into the translator.
@@ -46,65 +46,80 @@ class cypher2OWL(bs: BrainScowl, session: Session, dataset: String) {
   // coming from connectomics data.
 
   def add_typed_inds(test: Boolean = false) {
-
+    //* Adds typed, annotated inds to bs.
+    //* returns a map of feature short_form:label for use in rolling defs
+    // Design is rather too contingent for comfort.  Better to have exp labels this in reference ontology.
     val limit = if (test) {
       " limit 10"
     } else {
       ""
     } // Should really make test status into a separate function!
+    var feat_tracker = mutable.Set[String]()
+    
     val cypher = s"""MATCH (c:Class)<-[r:INSTANCEOF|Related]-(i:Individual)-[:has_source]->(ds:DataSet)
                   WHERE ds.short_form = '$dataset' 
-                  RETURN c.iri, r.iri, i.iri, type(r) as rel_typ""" + limit
-
+                  RETURN c.iri, r.iri, i.iri, c.short_form, type(r) as rel_typ, 
+                  i.label, i.comment, i.synonyms, c.label""" + limit
+    val ind_tracker = mutable.Set[String]()
     val results = this.session.run(cypher)
-    while (results.hasNext()) {
+    val label = AnnotationProperty("http://www.w3.org/2000/01/rdf-schema#label")
+
+    while (results.hasNext()) {      
       val record = results.next();
-      val i = NamedIndividual(record.get("i.iri").asString)
+      val ind_iri = record.get("i.iri").asString
+      val i = NamedIndividual(ind_iri)
       // TODO: call to function to check if i already in owl, add label if not
       val c = Class(record.get("c.iri").asString)
+      val feature = Class("http://purl.obolibrary.org/obo/SO_0000400")
       if (record.get("rel_typ").asString == "INSTANCEOF") {
         //print(s"""Adding $i Type $c \n""")
         this.bs.add_axiom(i Type c)
       } else if (record.get("rel_typ").asString == "Related") {
-        val r = ObjectProperty(record.get("r.iri").asString)
+        val riri = record.get("r.iri").asString
+        val r = ObjectProperty(riri)
         //print(s"""Adding $i Type $r some $c \n""")
         this.bs.add_axiom(i Type (r some c))
-      } else {
-        /// Add in a warning or fail.
+        if (riri == "http://purl.obolibrary.org/obo/RO_0002292") {
+          val ciri = record.get("c.iri").asString()
+          if (!feat_tracker.contains(ciri)) {
+            // Seems to be needed in otder 
+            val clab = record.get("c.label")
+            if (!clab.isNull()) {
+               this.support_ont.add_axiom(c SubClassOf feature) // Using for declarations
+               this.support_ont.add_axiom(c Annotation (label, clab.asString()))
+               feat_tracker.add(ciri)
+            }
+          }
+        }
       }
-      // if (record.get("hs.accession"))  - How to check truth - Return none type or perhaps none as text
+      if (!ind_tracker.contains(ind_iri)) {
+          this.add_annotations(record)
+          ind_tracker.add(ind_iri)
+      }
     }
   }
-  
-  def add_annotations(test: Boolean = false) {
-    val limit = if (test) {
-      " limit 10"
-    } else {
-      ""
-    } 
+
+  def add_annotations(record: Record) {  
     val label = AnnotationProperty("http://www.w3.org/2000/01/rdf-schema#label")
     val comment = AnnotationProperty("http://www.w3.org/2000/01/rdf-schema#comment")
     val synonym = AnnotationProperty("http://www.geneontology.org/formats/oboInOwl#hasExactSynonym")
-    val cypher = s"""MATCH (i:Individual)-[:has_source]->(ds:DataSet)
-                  WHERE ds.short_form = '$dataset' 
-                  RETURN i.iri, i.label, i.comment, i.synonyms""" + limit
-    val results = this.session.run(cypher)
-    while (results.hasNext()) {
-      val record = results.next();
       val i = NamedIndividual(record.get("i.iri").asString)
-      if (!record.get("i.label").isNull()) {
-        this.bs.add_axiom(i Annotation (label, record.get("i.label").asString()))
+      val lab = record.get("i.label")
+      if (!lab.isNull()) {
+        this.bs.add_axiom(i Annotation (label, lab.asString()))
       }
-      if (!record.get("i.comment").isNull()) {
-        this.bs.add_axiom(i Annotation (comment, record.get("i.comment").asString()))
+      val comm = record.get("i.comment")
+      if (!lab.isNull()) {
+        this.bs.add_axiom(i Annotation (comment, lab.asString()))
       }
-      if (!record.get("i.synonyms").isNull()) {
-        val syns = record.get("i.synonyms").asList.toArray
+      val synrec = record.get("i.synonyms")
+      if (!synrec.isNull()) {
+        val syns = synrec.asList.toArray
         for (s <- syns) {
             this.bs.add_axiom(i Annotation (synonym, s.toString))
             }
        }
-     }
+
    }
   
   def add_xrefs(test: Boolean = false) {
@@ -113,16 +128,17 @@ class cypher2OWL(bs: BrainScowl, session: Session, dataset: String) {
     } else {
       ""
     }
-    val xref = AnnotationProperty("http://www.w3.org/2000/01/rdf-schema#label")
+    val xref = AnnotationProperty("http://www.geneontology.org/formats/oboInOwl#hasDbXref")
     val cypher = s"""MATCH (s:Site)<-[dbx:hasDbXref]-(i:Individual)-[:has_source]->(ds:DataSet)
                   WHERE ds.short_form = '$dataset' 
-                  RETURN i.iri, s.db, dbx.accession""" + limit
+                  RETURN i.iri, s.label, dbx.accession""" + limit
     val results = this.session.run(cypher)
     while (results.hasNext()) {
       val record = results.next();
-      val i = NamedIndividual(record.get("i.iri").asString)    
+      val i = NamedIndividual(record.get("i.iri").asString)
+      // Using Site label for now.  Probably not ideal.
       this.bs.add_axiom(i Annotation (xref,
-          record.get("s.db").asString + ":" + record.get("dbx.accession").asString))
+          record.get("s.label").asString + ":" + record.get("dbx.accession").asString))
     }
   }
   
@@ -135,7 +151,7 @@ class cypher2OWL(bs: BrainScowl, session: Session, dataset: String) {
       center: String
       )  
   
-  def infer_overlap_from_channels(cutoff: Int, dataset: String) {
+  def infer_overlap_from_channels(cutoff: Int, test: Boolean = false) {
     val cypher = s"""MATCH (ds:DataSet { short_form: '$dataset' })<-[:has_source]-(neuron:Individual)
     -[:Related { short_form: 'depicts' }]->(s:Individual) 
 		-[re:Related]->(o:Individual)-[:Related { short_form: 'depicts' }]->(x) 
@@ -168,7 +184,7 @@ class cypher2OWL(bs: BrainScowl, session: Session, dataset: String) {
       val n = record.get("neuron.iri").asString()
       val vo = record.get("voxel_overlap").asMap
       val d = Overlap(neuropil_class_iri = record.get("neuropil_class.iri").asString,
-                     neuropil_class_label =  record.get("neuropil_class.iri").asString,
+                     neuropil_class_label =  record.get("neuropil_class.label").asString,
                      neuropil_channel_name = record.get("neuropil_channel_name").asString,
                      left = if (vo.keys.contains("voxel_overlap_center")) {
                        vo("voxel_overlap_left").toString

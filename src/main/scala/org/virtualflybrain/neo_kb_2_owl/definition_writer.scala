@@ -12,7 +12,7 @@ class definition_writer(ont: BrainScowl, fbbt: BrainScowl) {
   // Something to find all individuals in signature
 
   def add_defs() {
-    val defintion = AnnotationProperty("http://purl.obolibrary.org/obo/IAO_")
+    val defintion = AnnotationProperty("http://purl.obolibrary.org/obo/IAO_0000115")
     val inds = this.ont.ontology.getIndividualsInSignature()
     for (i <- inds) {
       val sf = ont.bi_sfp.getShortForm(i)
@@ -36,10 +36,8 @@ class definition_writer(ont: BrainScowl, fbbt: BrainScowl) {
       // Assumes single names parent class
        if (!typ.isAnonymous) {        
           val claz = ont.bi_sfp.getShortForm(typ.asOWLClass)
-          println(claz)
           val labels = fbbt.getLabels(claz)
           spec_genus =  if (labels.length > 0) { labels(0) } else { "" }
-          println(spec_genus)
           if (claz == "FBbt_00005106" || ont.getSuperClasses(claz).keys.contains("FBbt_00005106")) {
             genus = "neuron"
           }
@@ -47,7 +45,7 @@ class definition_writer(ont: BrainScowl, fbbt: BrainScowl) {
             genus = "expression pattern"
           }
           if (claz == "FBbt_00007683" || ont.getSuperClasses(claz).keys.contains("FBbt_00007683")) {
-            genus = "neuroblast lineage clone"       
+            genus = "neuroblast lineage clone"
           }
        } else {         
          val rels = typ.getObjectPropertiesInSignature()
@@ -55,32 +53,36 @@ class definition_writer(ont: BrainScowl, fbbt: BrainScowl) {
          val rel = if (rels.toArray.length == 1) {
            ont.bi_sfp.getShortForm(rels.last).toString()
          } else {
-           // Throw exception of warning
+           // Throw warning axiom too complex to process for definition?
            ""
          }
-         val claz = if (classes.toArray.length == 1) {
-           ont.bi_sfp.getShortForm(classes.last).toString()
-         } else {
-                     // Throw exception of warning
-           ""
+         var claz = ""
+         var claz_label = ""
+         if (classes.toArray.length == 1) {
+           claz = ont.bi_sfp.getShortForm(classes.last).toString()
+           val labels = this.fbbt.getLabels(claz)
+           claz_label = if (labels.length > 0) { labels(0) } else { "" }
          }
-         po = if ((rel == "BFO_0000050") && (claz == "FBbt_00003624")) {
-           "adult brain"
-         } else { "" }
-         gender = if ((rel ==  "BFO_0000050") && (claz == "FBbt_00007004")) {
-           "M"
-         } else if ((rel ==  "BFO_0000050") && (claz == "FBbt_00007011"))  {
-           "F"
-         } else { "" }
-         exp = if (rel ==  "RO_0002292") {
-          "fu" // Need to look up label expressed thingy // Requires feature ont to be loaded.
-         } else { "" }        
+         if (rel == "BFO_0000050") {
+           if (claz == "FBbt_00007004") {
+             gender = "female "
+           }
+           else if (claz == "FBbt_00007011")  {
+             gender = "male "
+           }
+           else {
+             po = claz_label
+           }
+         }
+         else if (rel ==  "RO_0002292") {
+          exp = claz_label // Need to look up label expressed thingy // Requires feature ont to be loaded.
+         }        
        }
     }
      var defn = ""
      if (genus == "neuron") {
        if (!spec_genus.isEmpty()) {
-          defn += s"A $spec_genus"
+          defn += s"A(n) $spec_genus"
        } else {
   			 defn += s"A $genus"
        }
@@ -88,12 +90,12 @@ class definition_writer(ont: BrainScowl, fbbt: BrainScowl) {
   			  defn += s" expressing $exp"
        }
        if (!po.isEmpty()) {
-  			  defn += s" that is part of an $po"
+              defn += s" that is part of a $gender$po"
        }
      }
      if (genus == "expression pattern") {
        if (!po.isEmpty() && !exp.isEmpty()) {
-         defn += s"An $po"
+         defn += s"A $gender$po"
        }
        if (!exp.isEmpty()) {
   			  defn += s" expressing $exp"
@@ -104,7 +106,7 @@ class definition_writer(ont: BrainScowl, fbbt: BrainScowl) {
     			defn += s"An example of a(n) $spec_genus"
        }
        if (!po.isEmpty()) {
-          defn += s" that is part of a(n) $po"
+          defn += s" that is part of a $gender$po"
        }
      }
     return defn + "."
