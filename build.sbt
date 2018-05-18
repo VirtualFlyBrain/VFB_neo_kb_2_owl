@@ -10,11 +10,19 @@ scalacOptions := Seq("-unchecked", "-deprecation", "-encoding", "utf8")
 
 licenses := Seq("MIT license" -> url("https://opensource.org/licenses/MIT"))
 
-homepage := Some(url("https://github.com/dosumis/brainscowl"))
+homepage := Some(url("https://github.com/org.virtualflybrain/neo_kb_2_owl"))
 
 javaOptions += "-Xmx6G"
 
 // initialCommands in (Test, console) := """ammonite.Main().run()"""
+
+def removegit = Command.command("removegit"){state =>
+  val home = sys.env("HOME")
+  val k = ("rm -rf "+ home + "/.sbt/0.13/staging/").!
+  state
+}
+
+commands ++= Seq(removegit)
 
 libraryDependencies ++= {
     //  TO CHECK: Is OWL API really needed or does in come with scowl?
@@ -33,5 +41,5 @@ libraryDependencies ++= {
 
 // Note - brainscowl import from GitHub is specified in project/build.scala
 
-initialCommands := "import org.virtualflybrain.neo_kb_2_owl"
+//initialCommands := "import org.virtualflybrain.neo_kb_2_owl"
 
