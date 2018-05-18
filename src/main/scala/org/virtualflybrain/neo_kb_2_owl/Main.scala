@@ -39,13 +39,11 @@ object Main extends (App) {
       // Make this an arg?
       val ds = cat.dataset
       var vfb_owl = new BrainScowl(iri_string = base + ds, base_iri = base)
-      var c2o = new cypher2OWL(vfb_owl, session, cat.dataset)
       var fbbt = new BrainScowl(file_path = cat.ontology)
+      var c2o = new cypher2OWL(vfb_owl, fbbt, session, cat.dataset)
       println(s"*** Processing $ds")
-      println("*** Adding typed inds")
+      println("*** Adding, annotating typed inds")
       c2o.add_typed_inds(cat.test)
-      println("*** Adding Annotations")
-      c2o.add_annotations(cat.test)
       println("*** Adding xrefs")
       c2o.add_xrefs(cat.test)
       if (cat.facts) {
@@ -56,7 +54,7 @@ object Main extends (App) {
       println("*** Adding defs")
       dw.add_defs()
       if (cat.infer_overlaps) { 
-        c2o.infer_overlap_from_channels(cutoff = 1000, dataset = ds)
+        c2o.infer_overlap_from_channels(cutoff = 1000)
       }
       vfb_owl.save(file_path = cat.dataset + ".owl", syntax = "ofn")
       session.close()
