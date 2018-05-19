@@ -202,7 +202,8 @@ class cypher2OWL(bs: BrainScowl, support_ont: BrainScowl, session: Session, data
         }
         overlap_by_neuron(n).add(d)
       }
-    val ro_overlap = ObjectProperty("http://purl.obo.obrary.org/obo/RO_0002131")
+    val ro_overlap = ObjectProperty("http://purl.obolibrary.org/obo/RO_0002131")
+    val comment = AnnotationProperty("http://www.w3.org/2000/01/rdf-schema#comment")
     for ((neuron, overlaps) <- overlap_by_neuron) {
        var neuron_overlap_txt = mutable.ArrayBuffer[String]()
        val n = NamedIndividual(neuron)
@@ -210,11 +211,11 @@ class cypher2OWL(bs: BrainScowl, support_ont: BrainScowl, session: Session, data
          val c = Class(o.neuropil_class_iri)
          val channel_name = o.neuropil_channel_name
          val class_label = o.neuropil_class_label
-         val txt = s"""Overlap of $class_label inferred from voxel overlap of
-                       $channel_name: 
-                       left: $o.left, right: $o.right, center: $o.center."""  // Ideally this will be edge annotation but for now we'll make it cat comment
+         val txt = s"""Overlap of $class_label inferred from voxel overlap of $channel_name: left: $o.left, right: $o.right, center: $o.center."""  // Ideally this will be edge annotation but for now we'll make it cat comment
          bs.add_axiom(n Type (ro_overlap some c))
-       }
+         neuron_overlap_txt.add(txt)
+         }
+//       bs.add_axiom(n Annotation (comment, neuron_overlap_txt.mkString(sep = " ")))
        }
     }
 
@@ -226,35 +227,22 @@ class cypher2OWL(bs: BrainScowl, support_ont: BrainScowl, session: Session, data
     } else {
       ""
     }
-    val cypher = s"""MATCH (c:Class)-[cr:INSTANCEOF|Related]-(j:Individual)
-                  <-[r:RELATED]-(i:Individual)-[:has_source]->(ds:DataSet) 
-                  WHERE ds.label = '$dataset' 
-                  RETURN c.iri, i.iri, r.iri, type(r) as rel_typ""" + limit
+    val blacklist_string = "'" + blacklist.mkString("','") + "'"
+    val ds = this.dataset
+    val cypher = s"""MATCH (j:Individual)-[r:Related]-(i:Individual)
+                    -[:has_source]->(ds:DataSet { short_form: '$ds'})
+                    WHERE not (r.short_form in[$blacklist_string])
+                    RETURN startNode(r).iri as start, 
+                    endNode(r).iri as end, 
+                    r.iri as rel""" + limit
     val results = this.session.run(cypher)
     while (results.hasNext()) {
       val record = results.next();
-      if (!(blacklist contains record.get("r.iri").asString)) {
-        val i = NamedIndividual(record.get("i.iri").asString)
-        val j = NamedIndividual(record.get("j.iri").asString)
-        val r = ObjectProperty(record.get("r.iri").asString)
-        this.bs.add_axiom(i Fact (r, j))
-        // Adding typing to J: This needs some refactoring to pull out generic typing into new method.
-        val c = Class(record.get("c.iri").asString) 
-        if (record.get("rel_typ").asString == "INSTANCEOF") {
-          //print(s"""Adding $i Type $c \n""")
-          this.bs.add_axiom(i Type c)
-        } else if (record.get("rel_typ").asString == "Related") {
-          val r = ObjectProperty(record.get("r.iri").asString)
-          //print(s"""Adding $i Type $r some $c \n""")
-          this.bs.add_axiom(i Type (r some c))
-        } else {
-          /// Add in a warning or fail.
-        }
-        // if (record.get("hs.accession"))  - How to check truth - Return none type or perhaps none as text?
-        //       
-        this.bs.add_axiom(j Type c) // Extend to add anonymous class typing to object ind
-      }    
+      val i = NamedIndividual(record.get("start").asString)
+      val j = NamedIndividual(record.get("end").asString)
+      val r = ObjectProperty(record.get("rel").asString)
+      this.bs.add_axiom(i Fact (r, j))
     }
   }
-  // Matching APs would be cool if poss...
+  
 }
