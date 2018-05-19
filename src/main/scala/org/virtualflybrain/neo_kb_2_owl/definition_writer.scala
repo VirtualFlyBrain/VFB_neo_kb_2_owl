@@ -16,9 +16,9 @@ class definition_writer(ont: BrainScowl, fbbt: BrainScowl) {
     val inds = this.ont.ontology.getIndividualsInSignature()
     for (i <- inds) {
       val sf = ont.bi_sfp.getShortForm(i)
-      println(s"**** Defining $sf.")
+//      println(s"**** Defining $sf.")
       val defn = roll_def(sf)
-      println(s"Def: $defn")
+//      println(s"Def: $defn")
       val ax = ont.add_axiom(i Annotation (defintion, defn))
     } 
   }
@@ -41,10 +41,10 @@ class definition_writer(ont: BrainScowl, fbbt: BrainScowl) {
           if (claz == "FBbt_00005106" || ont.getSuperClasses(claz).keys.contains("FBbt_00005106")) {
             genus = "neuron"
           }
-          if (claz == "CARO_0030002" || ont.getSuperClasses(claz).keys.contains("CARO_0030002")) {
+          else if (claz == "CARO_0030002" || ont.getSuperClasses(claz).keys.contains("CARO_0030002")) {
             genus = "expression pattern"
           }
-          if (claz == "FBbt_00007683" || ont.getSuperClasses(claz).keys.contains("FBbt_00007683")) {
+          else if (claz == "FBbt_00007683" || ont.getSuperClasses(claz).keys.contains("FBbt_00007683")) {
             genus = "neuroblast lineage clone"
           }
        } else {         
