@@ -45,15 +45,24 @@ class Builder(driver: Driver,
     val build_list = collection.mutable.ArrayBuffer[build_args]()
        while (results.hasNext()) {  
           val record = results.next()
-          if (record.get("ds.production").asBoolean()) {
-          build_list.append(build_args(driver = this.driver, 
+          val production = record.get("ds.production") 
+          val p =  if (production.isNull) { false } else { production.asBoolean() }
+          if (p) {
+            val dataset = record.get("dataset")
+            val facts = record.get("ds.facts")
+            val f = if (facts.isNull) { false } else { facts.asBoolean() }
+            val infer_overlap = record.get("ds.infer_overlap")
+            val io = if (infer_overlap.isNull) { false } else { infer_overlap.asBoolean() }
+            if (!dataset.isNull) {
+              build_list.append(build_args(driver = this.driver, 
                       ontology = this.ontology, 
-                      dataset = record.get("dataset").asString(),
-                      facts = record.get("ds.facts").asBoolean(),
+                      dataset = dataset.asString(),
+                      facts = f,
                       test = this.test, 
-                      infer_overlaps = record.get("ds.infer_overlap").asBoolean(), 
+                      infer_overlaps = io, 
                       include_images = this.include_images,
                       syntax = this.syntax))
+            }
           }
        }
        session.close()
