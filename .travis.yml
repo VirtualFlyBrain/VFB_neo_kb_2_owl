@@ -19,7 +19,4 @@ script:
 #   - sbt "run --usr=neo4j --pwd=test --endpoint=bolt://192.168.0.2:7687 --dataset=Hampel2015  --ontology=resources/support_ont.owl "
    - sbt "run -t --usr=neo4j --pwd=test --endpoint=bolt://192.168.0.2:7687 --dataset=Jenett2012  --ontology=resources/support_ont.owl "
    - sbt "run -t --usr=neo4j --pwd=test --endpoint=bolt://192.168.0.2:7687 --dataset=CostaJefferis_v3  --ontology=resources/support_ont.owl "
-   
 
-
->>>>>>> master
