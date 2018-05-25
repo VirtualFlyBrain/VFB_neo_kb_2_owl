@@ -54,8 +54,7 @@ class cypher2OWL(bs: BrainScowl, support_ont: BrainScowl, session: Session, data
     } else {
       ""
     } // Should really make test status into a separate function!
-    var feat_tracker = mutable.Set[String]()
-    
+    var feat_tracker = mutable.Map[String, String]()
     val cypher = s"""MATCH (c:Class)<-[r:INSTANCEOF|Related]-(i:Individual)-[:has_source]->(ds:DataSet)
                   WHERE ds.short_form = '$dataset' 
                   RETURN c.iri, r.iri, i.iri, c.short_form, type(r) as rel_typ, 
@@ -63,6 +62,7 @@ class cypher2OWL(bs: BrainScowl, support_ont: BrainScowl, session: Session, data
     val ind_tracker = mutable.Set[String]()
     val results = this.session.run(cypher)
     val label = AnnotationProperty("http://www.w3.org/2000/01/rdf-schema#label")
+    val feature = Class("http://purl.obolibrary.org/obo/SO_0000400")
 
     while (results.hasNext()) {      
       val record = results.next();
@@ -70,7 +70,6 @@ class cypher2OWL(bs: BrainScowl, support_ont: BrainScowl, session: Session, data
       val i = NamedIndividual(ind_iri)
       // TODO: call to function to check if i already in owl, add label if not
       val c = Class(record.get("c.iri").asString)
-      val feature = Class("http://purl.obolibrary.org/obo/SO_0000400")
       if (record.get("rel_typ").asString == "INSTANCEOF") {
         //print(s"""Adding $i Type $c \n""")
         this.bs.add_axiom(i Type c)
@@ -81,13 +80,13 @@ class cypher2OWL(bs: BrainScowl, support_ont: BrainScowl, session: Session, data
         this.bs.add_axiom(i Type (r some c))
         if (riri == "http://purl.obolibrary.org/obo/RO_0002292") {
           val ciri = record.get("c.iri").asString()
-          if (!feat_tracker.contains(ciri)) {
-            // Seems to be needed in otder 
+          if (!feat_tracker.keys.contains(ciri)) {
             val clab = record.get("c.label")
             if (!clab.isNull()) {
-               this.support_ont.add_axiom(c SubClassOf feature) // Using for declarations
+               // Some kind of classification needed for correct OWL typing.
+               this.support_ont.add_axiom(c SubClassOf feature) 
                this.support_ont.add_axiom(c Annotation (label, clab.asString()))
-               feat_tracker.add(ciri)
+               feat_tracker(ciri) = clab.asString()
             }
           }
         }
@@ -97,6 +96,14 @@ class cypher2OWL(bs: BrainScowl, support_ont: BrainScowl, session: Session, data
           ind_tracker.add(ind_iri)
       }
     }
+    // Hack for getting feature labels and classifications to vfb.owl.
+    // Should be deleted once this info is being pulled directly from FlyBase to PDB
+    // Some danger of duplicate labels if same driver in multiple datasets.
+    for ((k,v) <- feat_tracker) { 
+      val c = Class(k)
+      bs.add_axiom(c SubClassOf feature) 
+      bs.add_axiom(c Annotation (label, v)) 
+      }
   }
 
   def add_annotations(record: Record) {  
