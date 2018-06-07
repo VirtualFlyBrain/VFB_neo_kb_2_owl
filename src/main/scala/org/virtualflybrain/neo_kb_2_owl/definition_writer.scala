@@ -38,13 +38,13 @@ class definition_writer(ont: BrainScowl, fbbt: BrainScowl) {
           val claz = ont.bi_sfp.getShortForm(typ.asOWLClass)
           val labels = fbbt.getLabels(claz)
           spec_genus =  if (labels.length > 0) { labels(0) } else { "" }
-          if (claz == "FBbt_00005106" || ont.getSuperClasses(claz).keys.contains("FBbt_00005106")) {
+          if (claz == "FBbt_00005106" || fbbt.getSuperClasses(claz).keys.contains("FBbt_00005106")) {
             genus = "neuron"
           }
           else if (claz == "CARO_0030002" || ont.getSuperClasses(claz).keys.contains("CARO_0030002")) {
             genus = "expression pattern"
           }
-          else if (claz == "FBbt_00007683" || ont.getSuperClasses(claz).keys.contains("FBbt_00007683")) {
+          else if (claz == "FBbt_00007683" || fbbt.getSuperClasses(claz).keys.contains("FBbt_00007683")) {
             genus = "neuroblast lineage clone"
           }
        } else {         
@@ -65,10 +65,10 @@ class definition_writer(ont: BrainScowl, fbbt: BrainScowl) {
          }
          if (rel == "BFO_0000050") {
            if (claz == "FBbt_00007004") {
-             gender = "female "
+             gender = "male "
            }
            else if (claz == "FBbt_00007011")  {
-             gender = "male "
+             gender = "female "
            }
            else {
              po = claz_label
