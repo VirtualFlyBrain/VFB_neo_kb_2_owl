@@ -16,11 +16,13 @@ class definition_writer(ont: BrainScowl, fbbt: BrainScowl) {
     val inds = this.ont.ontology.getIndividualsInSignature()
     for (i <- inds) {
       val sf = ont.bi_sfp.getShortForm(i)
-//      println(s"**** Defining $sf.")
+      println(s"**** Defining $sf.")
       val defn = roll_def(sf)
-//      println(s"Def: $defn")
-      val ax = ont.add_axiom(i Annotation (defintion, defn))
-    } 
+      println(s"Def: $defn")
+      if (!defn.isEmpty()) {
+        ont.add_axiom(i Annotation (defintion, defn)) // Extend to add dataset?
+      }
+    }
   }
   
   
@@ -109,7 +111,8 @@ class definition_writer(ont: BrainScowl, fbbt: BrainScowl) {
           defn += s" that is part of a $gender$po"
        }
      }
-    return defn + "."
+    val out = if (!defn.isEmpty()) { defn + "." } else { "" }
+    return out
   }
   //		if spec_genus:
   //			def_comps[0] = "A %s" % spec_genus
