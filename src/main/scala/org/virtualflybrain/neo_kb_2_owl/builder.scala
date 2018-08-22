@@ -79,6 +79,8 @@ class Builder(driver: Driver,
 
       var c2o = new cypher2OWL(vfb_owl, args.ontology, session, ds)
       println(s"*** Processing $ds")
+      println("*** Adding, Expression patterns") 
+      c2o.add_expression_patterns()
       println("*** Adding, annotating typed inds")
       c2o.add_typed_inds(args.test)
       println("*** Adding xrefs")
