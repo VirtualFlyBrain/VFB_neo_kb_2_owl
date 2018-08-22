@@ -26,6 +26,16 @@ import scala.collection.JavaConversions._
 // Xref writer
 // Needs cycle over
 
+
+case class Overlap(
+      neuropil_class_iri: String,
+      neuropil_class_label: String,
+      neuropil_channel_name: String,
+      left: String,
+      right: String,
+      center: String
+      )  
+      
 class cypher2OWL(bs: BrainScowl, support_ont: BrainScowl, session: Session, dataset: String) {
   
   // constructor should include new Brainscowl object
@@ -44,6 +54,8 @@ class cypher2OWL(bs: BrainScowl, support_ont: BrainScowl, session: Session, data
   ////  Match direct individuals; 
   // 2. Load all and filter. The latter has the advantage that it will be easy to support intra-datset links
   // coming from connectomics data.
+  val label = AnnotationProperty("http://www.w3.org/2000/01/rdf-schema#label")
+  val definition = AnnotationProperty("http://purl.obolibrary.org/obo/IAO_0000115")
 
   def add_typed_inds(test: Boolean = false) {
     //* Adds typed, annotated inds to bs.
@@ -61,7 +73,6 @@ class cypher2OWL(bs: BrainScowl, support_ont: BrainScowl, session: Session, data
                   i.label, i.comment, i.synonyms, c.label""" + limit
     val ind_tracker = mutable.Set[String]()
     val results = this.session.run(cypher)
-    val label = AnnotationProperty("http://www.w3.org/2000/01/rdf-schema#label")
     val feature = Class("http://purl.obolibrary.org/obo/SO_0000400")
 
     while (results.hasNext()) {      
@@ -85,7 +96,7 @@ class cypher2OWL(bs: BrainScowl, support_ont: BrainScowl, session: Session, data
             if (!clab.isNull()) {
                // Some kind of classification needed for correct OWL typing.
                this.support_ont.add_axiom(c SubClassOf feature) 
-               this.support_ont.add_axiom(c Annotation (label, clab.asString()))
+               this.support_ont.add_axiom(c Annotation (this.label, clab.asString()))
                feat_tracker(ciri) = clab.asString()
             }
           }
@@ -149,14 +160,7 @@ class cypher2OWL(bs: BrainScowl, support_ont: BrainScowl, session: Session, data
     }
   }
   
-  case class Overlap(
-      neuropil_class_iri: String,
-      neuropil_class_label: String,
-      neuropil_channel_name: String,
-      left: String,
-      right: String,
-      center: String
-      )  
+
   
   def infer_overlap_from_channels(cutoff: Int, test: Boolean = false) {
     val cypher = s"""MATCH (ds:DataSet { short_form: '$dataset' })<-[:has_source]-(neuron:Individual)
@@ -234,8 +238,8 @@ class cypher2OWL(bs: BrainScowl, support_ont: BrainScowl, session: Session, data
     } else {
       ""
     }
-    val blacklist_string = "'" + blacklist.mkString("','") + "'"
     val ds = this.dataset
+    val blacklist_string = "'" + blacklist.mkString("','") + "'"
     val cypher = s"""MATCH (j:Individual)-[r:Related]-(i:Individual)
                     -[:has_source]->(ds:DataSet { short_form: '$ds'})
                     WHERE not (r.short_form in[$blacklist_string])
@@ -250,6 +254,36 @@ class cypher2OWL(bs: BrainScowl, support_ont: BrainScowl, session: Session, data
       val r = ObjectProperty(record.get("rel").asString)
       this.bs.add_axiom(i Fact (r, j))
     }
+  }
+  
+  def add_expression_patterns() {
+    // How to identify Classes to add?  Must this rely on asserted content in KB?  
+    // How will this be added consistently to KB? 
+    // Hack on ID for now. VFB_exp
+    val ds = this.dataset
+    val cypher = s"""MATCH (epg:Class)<-[:SUBCLASSOF]-(ep:Class)-[INSTANCEOF]-(i:Individual)
+                    -[:has_source]->(ds:DataSet { short_form: '$ds'})
+                    WHERE ep.short_form =~ '^VFBexp_.+'                   
+                    WITH ep, i, epg
+                    MATCH (ep)-[r:Related {label: 'expresses'}]->(feat:Feature)
+                    RETURN ep.iri, ep.label, i.iri, feat.iri, r.iri, feat.label"""
+   val results = this.session.run(cypher)
+   val label = 
+   while (results.hasNext()) {
+      val record = results.next();  
+      val i = NamedIndividual(record.get("i.iri").asString)
+      val ep = Class(record.get("ep.iri").asString)
+      val feat = Class(record.get("feat.iri").asString)
+      val feature_symbol = record.get("feat.label").asString
+      val epg = Class(record.get("epg.iri").asString)
+      val expresses = ObjectProperty(record.get("r.iri").asString)
+      this.bs.add_axiom(i Type ep)
+      this.bs.add_axiom(ep SubClassOf epg)
+      this.bs.add_axiom(ep SubClassOf (expresses some feat))     
+      this.bs.add_axiom(ep Annotation(this.label, record.get("ep.label").asString))
+      this.bs.add_axiom(ep Annotation(this.definition, s"""All the cells in some 
+       region of the body (e.g. adult brain; larval CNS) that express $feature_symbol."""))
+   }
   }
   
 }
