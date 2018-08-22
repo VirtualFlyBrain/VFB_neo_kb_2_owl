@@ -281,6 +281,9 @@ class cypher2OWL(bs: BrainScowl, support_ont: BrainScowl, session: Session, data
       this.bs.add_axiom(ep Annotation(this.label, record.get("ep.label").asString))
       this.bs.add_axiom(ep Annotation(this.definition, s"""All the cells in some 
        region of the body (e.g. adult brain; larval CNS) that express $feature_symbol."""))
+      // Adding ep and label to support ont to fix def rolling. 
+      // Classification needed for correct OWL typing for some reason.
+      this.support_ont.add_axiom(ep SubClassOf epg)       
       this.support_ont.add_axiom(ep Annotation(this.label, record.get("ep.label").asString))
    }
   }
