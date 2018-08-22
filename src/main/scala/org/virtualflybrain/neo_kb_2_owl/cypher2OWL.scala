@@ -266,7 +266,7 @@ class cypher2OWL(bs: BrainScowl, support_ont: BrainScowl, session: Session, data
                     WHERE ep.short_form =~ '^VFBexp_.+'                   
                     WITH ep, i, epg
                     MATCH (ep)-[re:Related]->(feat:Feature)
-                    RETURN ep.iri, ep.label, i.iri, feat.iri, re.iri, feat.label"""
+                    RETURN DISTINCT ep.iri, ep.label, i.iri, feat.iri, re.iri, feat.label"""
    val results = this.session.run(cypher)
    while (results.hasNext()) {
       val record = results.next();  
