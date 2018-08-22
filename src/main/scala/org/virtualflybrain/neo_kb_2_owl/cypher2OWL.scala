@@ -261,14 +261,13 @@ class cypher2OWL(bs: BrainScowl, support_ont: BrainScowl, session: Session, data
     // How will this be added consistently to KB? 
     // Hack on ID for now. VFB_exp
     val ds = this.dataset
-    val cypher = s"""MATCH (epg:Class)<-[:SUBCLASSOF]-(ep:Class)-[INSTANCEOF]-(i:Individual)
+    val cypher = s"""MATCH (epg:Class)<-[:SUBCLASSOF]-(ep:Class)<-[ri:INSTANCEOF|Related]-(i:Individual)
                     -[:has_source]->(ds:DataSet { short_form: '$ds'})
                     WHERE ep.short_form =~ '^VFBexp_.+'                   
                     WITH ep, i, epg
-                    MATCH (ep)-[r:Related {label: 'expresses'}]->(feat:Feature)
-                    RETURN ep.iri, ep.label, i.iri, feat.iri, r.iri, feat.label"""
+                    MATCH (ep)-[re:Related]->(feat:Feature)
+                    RETURN ep.iri, ep.label, i.iri, feat.iri, re.iri, feat.label"""
    val results = this.session.run(cypher)
-   val label = 
    while (results.hasNext()) {
       val record = results.next();  
       val i = NamedIndividual(record.get("i.iri").asString)
@@ -276,10 +275,9 @@ class cypher2OWL(bs: BrainScowl, support_ont: BrainScowl, session: Session, data
       val feat = Class(record.get("feat.iri").asString)
       val feature_symbol = record.get("feat.label").asString
       val epg = Class(record.get("epg.iri").asString)
-      val expresses = ObjectProperty(record.get("r.iri").asString)
-      this.bs.add_axiom(i Type ep)
+      val ep_2_feat = ObjectProperty(record.get("re.iri").asString)
       this.bs.add_axiom(ep SubClassOf epg)
-      this.bs.add_axiom(ep SubClassOf (expresses some feat))     
+      this.bs.add_axiom(ep SubClassOf (ep_2_feat some feat))     
       this.bs.add_axiom(ep Annotation(this.label, record.get("ep.label").asString))
       this.bs.add_axiom(ep Annotation(this.definition, s"""All the cells in some 
        region of the body (e.g. adult brain; larval CNS) that express $feature_symbol."""))
