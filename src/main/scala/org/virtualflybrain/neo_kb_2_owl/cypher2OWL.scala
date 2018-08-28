@@ -264,8 +264,8 @@ class cypher2OWL(bs: BrainScowl, support_ont: BrainScowl, session: Session, data
     val ds = this.dataset
     val cypher = s"""MATCH (epg:Class)<-[:SUBCLASSOF]-(ep:Class)<-[ri:INSTANCEOF|Related]-(i:Individual)
                     -[:has_source]->(ds:DataSet { short_form: '$ds'})
-                    WHERE ep.short_form =~ '^VFBexp_.+' """ + // this.filter_clause + // 
-                    """WITH ep, i, epg
+                    WHERE ep.short_form =~ '^VFBexp_.+' 
+                    WITH ep, i, epg
                     MATCH (ep)-[re:Related]->(feat:Feature)
                     RETURN DISTINCT epg.iri, ep.iri, ep.label, i.iri, feat.iri, re.iri, feat.label"""
    val results = this.session.run(cypher)
