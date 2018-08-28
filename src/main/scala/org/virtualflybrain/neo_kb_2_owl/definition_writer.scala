@@ -18,7 +18,7 @@ class definition_writer(ont: BrainScowl, fbbt: BrainScowl) {
       val sf = ont.bi_sfp.getShortForm(i)
       println(s"**** Defining $sf.")
       val defn = roll_def(sf)
-      println(s"Def: $defn")
+      //println(s"Def: $defn")
       if (!defn.isEmpty()) {
         ont.add_axiom(i Annotation (defintion, defn)) // Extend to add dataset?
       }
