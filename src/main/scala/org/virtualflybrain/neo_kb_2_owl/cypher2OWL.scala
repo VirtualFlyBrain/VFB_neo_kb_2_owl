@@ -69,9 +69,10 @@ class cypher2OWL(bs: BrainScowl, support_ont: BrainScowl, session: Session, data
     } // Should really make test status into a separate function!
     var feat_tracker = mutable.Map[String, String]()
     val cypher = s"""MATCH (c:Class)<-[r:INSTANCEOF|Related]-(i:Individual)-[:has_source]->(ds:DataSet)
-                  WHERE ds.short_form = '$dataset'""" + this.filter_clause +
-                  """RETURN c.iri, r.iri, i.iri, c.short_form, type(r) as rel_typ, 
+                  WHERE ds.short_form = '$dataset'""" + this.filter_clause + """
+                  RETURN c.iri, r.iri, i.iri, c.short_form, type(r) as rel_typ, 
                   i.label, i.comment, i.synonyms, c.label""" + limit
+    println(cypher)
     val ind_tracker = mutable.Set[String]()
     val results = this.session.run(cypher)
     val feature = Class("http://purl.obolibrary.org/obo/SO_0000400")
@@ -149,8 +150,9 @@ class cypher2OWL(bs: BrainScowl, support_ont: BrainScowl, session: Session, data
     }
     val xref = AnnotationProperty("http://www.geneontology.org/formats/oboInOwl#hasDbXref")
     val cypher = s"""MATCH (s:Site)<-[dbx:hasDbXref]-(i:Individual)-[:has_source]->(ds:DataSet)
-                  WHERE ds.short_form = '$dataset'""" + this.filter_clause +
-                  """RETURN i.iri, s.label, dbx.accession""" + limit
+                  WHERE ds.short_form = '$dataset'""" + this.filter_clause + """
+                  RETURN i.iri, s.label, dbx.accession""" + limit
+    println(cypher)
     val results = this.session.run(cypher)
     while (results.hasNext()) {
       val record = results.next();
@@ -243,10 +245,11 @@ class cypher2OWL(bs: BrainScowl, support_ont: BrainScowl, session: Session, data
     val blacklist_string = "'" + blacklist.mkString("','") + "'"
     val cypher = s"""MATCH (j:Individual)-[r:Related]-(i:Individual)
                     -[:has_source]->(ds:DataSet { short_form: '$ds'})
-                    WHERE not (r.short_form in[$blacklist_string])""" + this.filter_clause +
-                    """RETURN startNode(r).iri as start, 
+                    WHERE not (r.short_form in[$blacklist_string])""" + this.filter_clause + """
+                    RETURN startNode(r).iri as start, 
                     endNode(r).iri as end, 
                     r.iri as rel""" + limit
+    println(cypher)
     val results = this.session.run(cypher)
     while (results.hasNext()) {
       val record = results.next();
