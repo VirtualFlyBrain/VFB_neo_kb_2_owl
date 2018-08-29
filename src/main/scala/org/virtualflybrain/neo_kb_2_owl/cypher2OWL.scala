@@ -56,7 +56,7 @@ class cypher2OWL(bs: BrainScowl, support_ont: BrainScowl, session: Session, data
   // coming from connectomics data.
   val label = AnnotationProperty("http://www.w3.org/2000/01/rdf-schema#label")
   val definition = AnnotationProperty("http://purl.obolibrary.org/obo/IAO_0000115")
-  val filter_clause = " AND (not (i.do_not_publish)) or (i.do_not_publish is null) "
+  val filter_clause = " AND ((not (i.do_not_publish)) OR (i.do_not_publish is null)) "
 
   def add_typed_inds(test: Boolean = false) {
     //* Adds typed, annotated inds to bs.
