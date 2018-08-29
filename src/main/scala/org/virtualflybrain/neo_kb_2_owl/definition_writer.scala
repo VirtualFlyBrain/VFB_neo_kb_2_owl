@@ -16,7 +16,7 @@ class definition_writer(ont: BrainScowl, fbbt: BrainScowl) {
     val inds = this.ont.ontology.getIndividualsInSignature()
     for (i <- inds) {
       val sf = ont.bi_sfp.getShortForm(i)
-      println(s"**** Defining $sf.")
+      //println(s"**** Defining $sf.")
       val defn = roll_def(sf)
       println(s"Def: $defn")
       if (!defn.isEmpty()) {
