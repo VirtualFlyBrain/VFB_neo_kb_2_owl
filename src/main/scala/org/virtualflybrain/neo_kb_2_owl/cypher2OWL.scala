@@ -281,7 +281,8 @@ class cypher2OWL(bs: BrainScowl, support_ont: BrainScowl, session: Session, data
       val epg = Class(record.get("epg.iri").asString)
       val ep_2_feat = ObjectProperty(record.get("re.iri").asString)
       this.bs.add_axiom(ep SubClassOf epg)
-      this.bs.add_axiom(ep SubClassOf (ep_2_feat some feat))     
+      this.bs.add_axiom(ep SubClassOf (ep_2_feat some feat))
+      this.bs.add_axiom(feat Annotation(this.label, feature_symbol))
       this.bs.add_axiom(ep Annotation(this.label, record.get("ep.label").asString))
       this.bs.add_axiom(ep Annotation(this.definition, s"""All the cells in some region of the body (e.g. adult brain, larval CNS) that express $feature_symbol."""))
       // Adding ep and label to support ont to fix def rolling. 
