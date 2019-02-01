@@ -34,8 +34,9 @@ class definition_writer(ont: BrainScowl, fbbt: BrainScowl) {
     var	po = ""
     var exp = ""
     var gender = ""
+    var hemidrivers = new ArrayBuffer[String]
     for (typ <- typs) {
-      // Assumes single names parent class
+      // Assumes single parent class - not a good assumption!
        if (!typ.isAnonymous) {        
           val claz = ont.bi_sfp.getShortForm(typ.asOWLClass)
           val labels = fbbt.getLabels(claz)
@@ -45,6 +46,9 @@ class definition_writer(ont: BrainScowl, fbbt: BrainScowl) {
           }
           else if (claz == "CARO_0030002" || ont.getSuperClasses(claz).keys.contains("CARO_0030002")) {
             genus = "expression pattern"
+          }
+          else if (claz == "VFBext_0000010" || ont.getSuperClasses(claz).keys.contains("VFBext_0000010")) {
+            genus = "intersectional expression pattern"
           }
           else if (claz == "FBbt_00007683" || fbbt.getSuperClasses(claz).keys.contains("FBbt_00007683")) {
             genus = "neuroblast lineage clone"
@@ -78,7 +82,7 @@ class definition_writer(ont: BrainScowl, fbbt: BrainScowl) {
          }
          else if (rel ==  "RO_0002292") {
           exp = claz_label // Need to look up label expressed thingy // Requires feature ont to be loaded.
-         }        
+         }
        }
     }
      var defn = ""
@@ -103,6 +107,15 @@ class definition_writer(ont: BrainScowl, fbbt: BrainScowl) {
   			  defn += s" expressing $exp"
        }
      }
+     if (genus == "intersectional expression pattern") {
+       if (!spec_genus.isEmpty()) {
+          defn += s"A $spec_genus"
+         if (!po.isEmpty()) {
+              defn += s" that is part of a $gender$po"
+         }
+       }
+     }
+     
      if (genus == "neuroblast lineage clone") {
        if (!spec_genus.isEmpty()) {
     			defn += s"An example of a(n) $spec_genus"
