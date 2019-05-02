@@ -280,7 +280,7 @@ class cypher2OWL(bs: BrainScowl, support_ont: BrainScowl, session: Session, data
       val feature_symbol = record.get("feat.label").asString
       val epg = Class(record.get("epg.iri").asString)
       val ep_2_feat = ObjectProperty(record.get("re.iri").asString)
-      val defrec = record.get("re.definition")
+      val defrec = record.get("re.description")
       if (!defrec.isNull()) {
         val defl = defrec.asList
         if (!defl.isEmpty()) { 
