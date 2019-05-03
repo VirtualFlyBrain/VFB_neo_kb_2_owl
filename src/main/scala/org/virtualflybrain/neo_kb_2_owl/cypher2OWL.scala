@@ -270,7 +270,7 @@ class cypher2OWL(bs: BrainScowl, support_ont: BrainScowl, session: Session, data
                     WHERE ep.short_form =~ '^VFBexp_.+' 
                     WITH ep, i, epg
                     MATCH (ep)-[re:Related]->(feat:Feature)
-                    RETURN DISTINCT epg.iri, ep.iri, ep.label, i.iri, feat.iri, re.iri, feat.label"""
+                    RETURN DISTINCT epg.iri, ep.iri, ep.label, ep.description, i.iri, feat.iri, re.iri, feat.label"""
    val results = this.session.run(cypher)
    while (results.hasNext()) {
       val record = results.next();  
@@ -280,16 +280,22 @@ class cypher2OWL(bs: BrainScowl, support_ont: BrainScowl, session: Session, data
       val feature_symbol = record.get("feat.label").asString
       val epg = Class(record.get("epg.iri").asString)
       val ep_2_feat = ObjectProperty(record.get("re.iri").asString)
+      val defrec = record.get("ep.description")
+      if (!defrec.isNull()) {
+        val defl = defrec.asList().toVector
+        if (!defl.isEmpty()) { 
+          this.bs.add_axiom(ep Annotation(this.definition, defl(0).toString())) 
+          }
+      }
       this.bs.add_axiom(ep SubClassOf epg)
       this.bs.add_axiom(ep SubClassOf (ep_2_feat some feat))
       this.bs.add_axiom(feat Annotation(this.label, feature_symbol))
       this.bs.add_axiom(ep Annotation(this.label, record.get("ep.label").asString))
-      this.bs.add_axiom(ep Annotation(this.definition, s"""All the cells in some region of the body (e.g. adult brain, larval CNS) that express $feature_symbol."""))
+      // this.bs.add_axiom(ep Annotation(this.definition, s"""All the cells in some region of the body (e.g. adult brain, larval CNS) that express $feature_symbol."""))
       // Adding ep and label to support ont to fix def rolling. 
       // Classification needed for correct OWL typing for some reason.
       this.support_ont.add_axiom(ep SubClassOf epg)       
       this.support_ont.add_axiom(ep Annotation(this.label, record.get("ep.label").asString))
    }
   }
-  
 }
