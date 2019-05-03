@@ -270,7 +270,7 @@ class cypher2OWL(bs: BrainScowl, support_ont: BrainScowl, session: Session, data
                     WHERE ep.short_form =~ '^VFBexp_.+' 
                     WITH ep, i, epg
                     MATCH (ep)-[re:Related]->(feat:Feature)
-                    RETURN DISTINCT epg.iri, ep.iri, ep.label, i.iri, feat.iri, re.iri, feat.label"""
+                    RETURN DISTINCT epg.iri, ep.iri, ep.label, ep.description, i.iri, feat.iri, re.iri, feat.label"""
    val results = this.session.run(cypher)
    while (results.hasNext()) {
       val record = results.next();  
@@ -282,7 +282,7 @@ class cypher2OWL(bs: BrainScowl, support_ont: BrainScowl, session: Session, data
       val ep_2_feat = ObjectProperty(record.get("re.iri").asString)
       val defrec = record.get("ep.description")
       if (!defrec.isNull()) {
-        val defl = defrec.asList()
+        val defl = defrec.asList().toVector
         if (!defl.isEmpty()) { 
           this.bs.add_axiom(ep Annotation(this.definition, defl(0).toString())) 
           }
