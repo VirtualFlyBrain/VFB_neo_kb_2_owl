@@ -296,7 +296,7 @@ class cypher2OWL(bs: BrainScowl, support_ont: BrainScowl, session: Session, data
       if (!synrec.isNull()) {
         val syns = synrec.asList.toArray
         for (s <- syns) {
-            this.bs.add_axiom(i Annotation (this.synonym, s.toString))
+            this.bs.add_axiom(ep Annotation (this.synonym, s.toString))
             }
       }      
       // Adding ep and label to support ont to fix def rolling. 
