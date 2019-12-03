@@ -56,6 +56,7 @@ class cypher2OWL(bs: BrainScowl, support_ont: BrainScowl, session: Session, data
   // coming from connectomics data.
   val label = AnnotationProperty("http://www.w3.org/2000/01/rdf-schema#label")
   val definition = AnnotationProperty("http://purl.obolibrary.org/obo/IAO_0000115")
+  val synonym = AnnotationProperty("http://www.geneontology.org/formats/oboInOwl#hasExactSynonym")
   val filter_clause = " AND ((not (i.do_not_publish)) OR (i.do_not_publish is null)) "
 
   def add_typed_inds(test: Boolean = false) {
@@ -295,7 +296,7 @@ class cypher2OWL(bs: BrainScowl, support_ont: BrainScowl, session: Session, data
       if (!synrec.isNull()) {
         val syns = synrec.asList.toArray
         for (s <- syns) {
-            this.bs.add_axiom(i Annotation (synonym, s.toString))
+            this.bs.add_axiom(i Annotation (this.synonym, s.toString))
             }
       }      
       // Adding ep and label to support ont to fix def rolling. 
