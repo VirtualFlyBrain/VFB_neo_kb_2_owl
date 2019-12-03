@@ -24,6 +24,9 @@ def removegit = Command.command("removegit"){state =>
 
 commands ++= Seq(removegit)
 
+lazy val root = (project in file(".")).dependsOn(brainscowl)
+lazy val playJongo = RootProject(uri("git://github.com/dosumis/brainscowl.git"))
+
 libraryDependencies ++= {
     //  TO CHECK: Is OWL API really needed or does in come with scowl?
     //   "net.sourceforge.owlapi"     %  "owlapi-distribution" % "4.2.1",
