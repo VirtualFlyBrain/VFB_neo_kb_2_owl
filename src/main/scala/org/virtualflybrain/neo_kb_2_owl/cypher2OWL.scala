@@ -56,6 +56,7 @@ class cypher2OWL(bs: BrainScowl, support_ont: BrainScowl, session: Session, data
   // coming from connectomics data.
   val label = AnnotationProperty("http://www.w3.org/2000/01/rdf-schema#label")
   val definition = AnnotationProperty("http://purl.obolibrary.org/obo/IAO_0000115")
+  val synonym = AnnotationProperty("http://www.geneontology.org/formats/oboInOwl#hasExactSynonym")
   val filter_clause = " AND ((not (i.do_not_publish)) OR (i.do_not_publish is null)) "
 
   def add_typed_inds(test: Boolean = false) {
@@ -263,14 +264,14 @@ class cypher2OWL(bs: BrainScowl, support_ont: BrainScowl, session: Session, data
   def add_expression_patterns() {
     // How to identify Classes to add?  Must this rely on asserted content in KB?  
     // How will this be added consistently to KB? 
-    // Hack on ID for now. VFB_exp
+    // Hack on ID for now. VFBexp_
     val ds = this.dataset
     val cypher = s"""MATCH (epg:Class)<-[:SUBCLASSOF]-(ep:Class)<-[ri:INSTANCEOF|Related]-(i:Individual)
                     -[:has_source]->(ds:DataSet { short_form: '$ds'})
                     WHERE ep.short_form =~ '^VFBexp_.+' 
                     WITH ep, i, epg
                     MATCH (ep)-[re:Related]->(feat:Feature)
-                    RETURN DISTINCT epg.iri, ep.iri, ep.label, ep.description, i.iri, feat.iri, re.iri, feat.label"""
+                    RETURN DISTINCT epg.iri, ep.iri, ep.label, ep.description, ep.synonyms, i.iri, feat.iri, re.iri, feat.label"""
    val results = this.session.run(cypher)
    while (results.hasNext()) {
       val record = results.next();  
@@ -291,7 +292,13 @@ class cypher2OWL(bs: BrainScowl, support_ont: BrainScowl, session: Session, data
       this.bs.add_axiom(ep SubClassOf (ep_2_feat some feat))
       this.bs.add_axiom(feat Annotation(this.label, feature_symbol))
       this.bs.add_axiom(ep Annotation(this.label, record.get("ep.label").asString))
-      // this.bs.add_axiom(ep Annotation(this.definition, s"""All the cells in some region of the body (e.g. adult brain, larval CNS) that express $feature_symbol."""))
+      val synrec = record.get("ep.synonyms")
+      if (!synrec.isNull()) {
+        val syns = synrec.asList.toArray
+        for (s <- syns) {
+            this.bs.add_axiom(ep Annotation (this.synonym, s.toString))
+            }
+      }      
       // Adding ep and label to support ont to fix def rolling. 
       // Classification needed for correct OWL typing for some reason.
       this.support_ont.add_axiom(ep SubClassOf epg)       
