@@ -84,7 +84,7 @@ class Builder(driver: Driver,
       println("*** Adding, annotating typed inds")
       c2o.add_typed_inds(args.test)
       println("*** Adding xrefs")
-      c2o.add_xrefs(args.test)
+//      c2o.add_xrefs(args.test) // We don't need xrefs in the OWL as direct copying between DBs works.
       if (args.facts) {
         println("*** Adding facts")
         c2o.add_facts(blacklist, args.test)
